@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Check, Copy, RotateCcw, Pencil, Eye } from "lucide-react";
+import { Check, Copy, RotateCcw, Pencil, Eye, Loader2 } from "lucide-react";
 
 interface StepResultProps {
   prompt: string;
+  isGenerating?: boolean;
   onReset: () => void;
 }
 
@@ -13,20 +14,38 @@ const SECTION_COLORS: Record<string, { color: string; label: string }> = {
   suffix: { color: "#CCCCCC", label: "⚪ Sufixo Técnico" },
 };
 
-export default function StepResult({ prompt, onReset }: StepResultProps) {
+export default function StepResult({ prompt, isGenerating, onReset }: StepResultProps) {
   const [copied, setCopied] = useState(false);
   const [editable, setEditable] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(prompt);
   const [showStructure, setShowStructure] = useState(false);
 
   const currentPrompt = editable ? editedPrompt : prompt;
-  const wordCount = currentPrompt.trim().split(/\s+/).length;
+  const wordCount = currentPrompt.trim().split(/\s+/).filter(Boolean).length;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(currentPrompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  if (isGenerating) {
+    return (
+      <div className="animate-fade-up max-w-2xl mx-auto text-center py-20">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "hsl(var(--gold) / 0.1)" }}>
+          <Loader2 className="w-7 h-7 text-gold animate-spin" />
+        </div>
+        <h2 className="font-display text-2xl font-semibold mb-2" style={{ lineHeight: 1.1 }}>
+          Gerando seu prompt final...
+        </h2>
+        <p className="text-muted-foreground font-mono text-sm">
+          A IA está refinando e combinando todos os elementos
+        </p>
+      </div>
+    );
+  }
+
+  if (!prompt) return null;
 
   return (
     <div className="animate-fade-up max-w-3xl mx-auto">
