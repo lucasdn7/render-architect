@@ -61,7 +61,7 @@ export default function StepAnalysis({ analysis, isAnalyzing, onNext }: StepAnal
                   {label}
                 </div>
                 <div className="text-sm font-mono text-foreground">
-                  {(analysis as Record<string, string>)[key] || "—"}
+                  {(analysis as unknown as Record<string, string>)[key] || "—"}
                 </div>
               </div>
             </div>
