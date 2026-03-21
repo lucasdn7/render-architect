@@ -5,10 +5,11 @@ import { Loader2 } from "lucide-react";
 interface StepAnalysisProps {
   analysis: ImageAnalysis | null;
   isAnalyzing: boolean;
+  loadingMessage?: string;
   onNext: () => void;
 }
 
-export default function StepAnalysis({ analysis, isAnalyzing, onNext }: StepAnalysisProps) {
+export default function StepAnalysis({ analysis, isAnalyzing, loadingMessage, onNext }: StepAnalysisProps) {
   if (isAnalyzing) {
     return (
       <div className="animate-fade-up max-w-2xl mx-auto text-center py-20">
@@ -16,7 +17,7 @@ export default function StepAnalysis({ analysis, isAnalyzing, onNext }: StepAnal
           <Loader2 className="w-7 h-7 text-gold animate-spin" />
         </div>
         <h2 className="font-display text-2xl font-semibold mb-2" style={{ lineHeight: 1.1 }}>
-          Lendo cada detalhe da sua imagem...
+          {loadingMessage || "Lendo cada detalhe da sua imagem..."}
         </h2>
         <p className="text-muted-foreground font-mono text-sm">
           Nossa IA está analisando estilo, materiais, iluminação e composição

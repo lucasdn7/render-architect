@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { Clock, Box } from "lucide-react";
+import { toast } from "sonner";
 import WizardProgress from "@/components/WizardProgress";
 import StepUpload from "@/components/StepUpload";
 import StepAnalysis from "@/components/StepAnalysis";
@@ -9,71 +10,16 @@ import StepResult from "@/components/StepResult";
 import HistoryPanel from "@/components/HistoryPanel";
 import { WizardState, ImageAnalysis } from "@/types/promptRender";
 import { addToHistory } from "@/lib/history";
-import {
-  RENDER_TYPE_PROMPTS, LIGHTING_PROMPTS, ENVIRONMENT_PROMPTS,
-  QUALITY_PROMPTS, CAMERA_PROMPTS, TECHNICAL_SUFFIX,
-  HUMANIZATION_PROMPT_TEMPLATE, ANIMAL_PROMPT_TEMPLATE,
-} from "@/lib/promptMappings";
+import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
 
 const STEP_LABELS = ["Upload", "Análise", "Configurar", "Humanizar", "Resultado"];
 
-const MOCK_ANALYSIS: ImageAnalysis = {
-  IMAGE_TYPE: "3D Architectural Render",
-  ARCHITECTURAL_STYLE: "Contemporary Minimalist",
-  ENVIRONMENT: "Exterior",
-  MATERIALS: "Exposed concrete, floor-to-ceiling glass panels, natural wood cladding, brushed steel",
-  OBJECTS: "Modular outdoor furniture, infinity pool, mature olive trees, sculptural lighting fixtures",
-  LIGHTING: "Natural daylight, late afternoon warm tones",
-  COLORS: "Warm greys, off-white, natural wood tones, deep charcoal accents",
-  TEXTURES: "Smooth concrete, reflective glass, rough-sawn timber, polished stone",
-  SPATIAL_COMPOSITION: "Two-point perspective, wide-angle view, strong horizontal lines, foreground-to-background depth",
-  ARCHITECTURAL_DETAILS: "Cantilevered roof overhang, recessed window frames, floating staircase, green roof section",
-  ATMOSPHERE: "Serene, luxurious, harmonious integration with natural landscape",
-  FULL_DESCRIPTION: "A contemporary minimalist residence rendered in late afternoon light, featuring exposed concrete volumes with floor-to-ceiling glazing and natural wood cladding. The exterior showcases a cantilevered roof extending over an infinity pool, framed by mature olive trees and sculptural landscape lighting. The composition emphasizes strong horizontal lines and harmonious material contrast between raw concrete, warm timber, and reflective glass surfaces.",
-};
-
-function buildPrompt(state: WizardState): string {
-  const parts: string[] = [];
-
-  // Image description
-  if (state.analysis?.FULL_DESCRIPTION) {
-    parts.push(state.analysis.FULL_DESCRIPTION);
-  }
-
-  // Render config prompts
-  const { renderConfig } = state;
-  if (renderConfig.renderType && RENDER_TYPE_PROMPTS[renderConfig.renderType]) {
-    parts.push(RENDER_TYPE_PROMPTS[renderConfig.renderType]);
-  }
-  if (renderConfig.lighting && LIGHTING_PROMPTS[renderConfig.lighting]) {
-    parts.push(LIGHTING_PROMPTS[renderConfig.lighting]);
-  }
-  for (const env of renderConfig.environments) {
-    if (ENVIRONMENT_PROMPTS[env]) parts.push(ENVIRONMENT_PROMPTS[env]);
-  }
-  if (renderConfig.quality && QUALITY_PROMPTS[renderConfig.quality]) {
-    parts.push(QUALITY_PROMPTS[renderConfig.quality]);
-  }
-  if (renderConfig.camera && CAMERA_PROMPTS[renderConfig.camera]) {
-    parts.push(CAMERA_PROMPTS[renderConfig.camera]);
-  }
-
-  // Humanization
-  const { humanization } = state;
-  if (humanization.enabled) {
-    if (humanization.addPeople && humanization.peopleDescription.trim()) {
-      parts.push(HUMANIZATION_PROMPT_TEMPLATE(humanization.peopleDescription));
-    }
-    if (humanization.addAnimals && humanization.animalDescription.trim()) {
-      parts.push(ANIMAL_PROMPT_TEMPLATE(humanization.animalDescription));
-    }
-  }
-
-  // Technical suffix
-  parts.push(TECHNICAL_SUFFIX);
-
-  return parts.join(", ");
-}
+const LOADING_MESSAGES = [
+  "Analisando estrutura arquitetônica...",
+  "Identificando materiais e texturas...",
+  "Mapeando composição espacial...",
+  "Concluindo análise detalhada...",
+];
 
 const initialState: WizardState = {
   currentStep: 0,
@@ -101,6 +47,8 @@ const initialState: WizardState = {
 export default function Index() {
   const [state, setState] = useState<WizardState>(initialState);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const update = useCallback((partial: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -112,18 +60,115 @@ export default function Index() {
     update({ imageFile: file, imagePreview: preview });
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    if (!state.imagePreview) return;
+
     update({ currentStep: 1, isAnalyzing: true });
-    // Simulate AI analysis (replace with real API call when backend is ready)
-    setTimeout(() => {
-      update({ analysis: MOCK_ANALYSIS, isAnalyzing: false });
+
+    // Cycle through loading messages
+    let msgIndex = 0;
+    const msgInterval = setInterval(() => {
+      msgIndex = (msgIndex + 1) % LOADING_MESSAGES.length;
+      setLoadingMessage(LOADING_MESSAGES[msgIndex]);
     }, 2500);
+
+    try {
+      const analysis = await analyzeImage(state.imagePreview);
+      update({ analysis, isAnalyzing: false });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao analisar imagem";
+      toast.error(message);
+      update({ currentStep: 0, isAnalyzing: false });
+    } finally {
+      clearInterval(msgInterval);
+    }
   };
 
-  const handleGeneratePrompt = () => {
-    const prompt = buildPrompt(state);
-    update({ currentStep: 4, finalPrompt: prompt });
-    addToHistory({ prompt, imagePreview: state.imagePreview || undefined });
+  const getSelectedKeys = (): string[] => {
+    const { renderConfig } = state;
+    const keys: string[] = [];
+
+    // Map existing config IDs to promptsConfig keys
+    const renderTypeMap: Record<string, string> = {
+      exterior: "render_externo",
+      interior: "render_interno",
+      aerial: "render_aereo",
+      detail: "render_detalhe",
+    };
+    const lightingMap: Record<string, string> = {
+      daylight: "diurno",
+      golden_hour: "entardecer",
+      night: "noturno",
+      cloudy: "nublado",
+      rain: "chuva",
+      dawn: "amanhecer",
+    };
+    const envMap: Record<string, string> = {
+      pool: "piscina",
+      garden: "jardim",
+      gourmet: "area_gourmet",
+      garage: "garagem",
+      deck: "deck",
+      scenic_lighting: "iluminacao_cenica",
+      fog: "nevoa",
+      water_mirror: "espelho_dagua",
+    };
+    const qualityMap: Record<string, string> = {
+      photorealistic: "fotorrealista",
+      classic: "classico",
+      atmospheric: "atmosferico",
+      minimalist: "minimalista",
+    };
+    const cameraMap: Record<string, string> = {
+      eye_level: "eye_level",
+      worms_eye: "worm_eye",
+      birds_eye: "bird_eye",
+      dutch_angle: "dutch_angle",
+      wide_angle: "wide_angle",
+    };
+
+    if (renderConfig.renderType && renderTypeMap[renderConfig.renderType]) {
+      keys.push(renderTypeMap[renderConfig.renderType]);
+    }
+    if (renderConfig.lighting && lightingMap[renderConfig.lighting]) {
+      keys.push(lightingMap[renderConfig.lighting]);
+    }
+    for (const env of renderConfig.environments) {
+      if (envMap[env]) keys.push(envMap[env]);
+    }
+    if (renderConfig.quality && qualityMap[renderConfig.quality]) {
+      keys.push(qualityMap[renderConfig.quality]);
+    }
+    if (renderConfig.camera && cameraMap[renderConfig.camera]) {
+      keys.push(cameraMap[renderConfig.camera]);
+    }
+
+    return keys;
+  };
+
+  const handleGeneratePrompt = async () => {
+    setIsGenerating(true);
+    update({ currentStep: 4 });
+
+    try {
+      const selectedKeys = getSelectedKeys();
+      const imageDescription = state.analysis?.FULL_DESCRIPTION || "";
+
+      const prompt = await generateFinalPrompt(
+        imageDescription,
+        selectedKeys,
+        state.humanization
+      );
+
+      update({ finalPrompt: prompt });
+      addToHistory({ prompt, imagePreview: state.imagePreview || undefined });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao gerar prompt";
+      toast.error(message);
+      update({ currentStep: 3 });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleReset = () => setState(initialState);
@@ -177,6 +222,7 @@ export default function Index() {
           <StepAnalysis
             analysis={state.analysis}
             isAnalyzing={state.isAnalyzing}
+            loadingMessage={loadingMessage}
             onNext={() => goToStep(2)}
           />
         )}
@@ -200,6 +246,7 @@ export default function Index() {
         {state.currentStep === 4 && (
           <StepResult
             prompt={state.finalPrompt}
+            isGenerating={isGenerating}
             onReset={handleReset}
           />
         )}
