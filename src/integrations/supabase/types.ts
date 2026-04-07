@@ -21,6 +21,7 @@ export type Database = {
           image_preview: string | null
           prompt: string
           render_config: Json | null
+          user_id: string | null
           word_count: number | null
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           image_preview?: string | null
           prompt: string
           render_config?: Json | null
+          user_id?: string | null
           word_count?: number | null
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           image_preview?: string | null
           prompt?: string
           render_config?: Json | null
+          user_id?: string | null
           word_count?: number | null
         }
         Relationships: []
