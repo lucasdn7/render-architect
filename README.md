@@ -46,12 +46,11 @@ supabase functions deploy analyze-image
 supabase functions deploy generate-prompt
 ```
 
-### 5) Configurar segredos da OpenAI nas Edge Functions
-As duas funções leem `OPENAI_API_KEY` e opcionalmente `OPENAI_MODEL` (padrão: `gpt-4o-mini`).
+### 5) Configurar segredo da IA nas Edge Functions
+As duas funções leem `LOVABLE_API_KEY`.
 
 ```bash
-supabase secrets set OPENAI_API_KEY="SUA_CHAVE_OPENAI"
-supabase secrets set OPENAI_MODEL="gpt-4o-mini"
+supabase secrets set LOVABLE_API_KEY="SUA_CHAVE"
 ```
 
 ## Solução de problemas (db push)
