@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock, Trash2, Copy, X } from "lucide-react";
-import { PromptHistoryItem } from "@/types/promptRender";
-import { getHistory, clearHistory } from "@/lib/history";
+import { getHistory, clearHistory, PromptHistoryItem } from "@/lib/history";
 
 interface HistoryPanelProps {
   open: boolean;
@@ -9,8 +8,14 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
-  const [items, setItems] = useState<PromptHistoryItem[]>(getHistory);
+  const [items, setItems] = useState<PromptHistoryItem[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      getHistory().then(setItems);
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -20,8 +25,8 @@ export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const handleClear = () => {
-    clearHistory();
+  const handleClear = async () => {
+    await clearHistory();
     setItems([]);
   };
 
@@ -60,7 +65,7 @@ export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
             {items.map((item) => (
               <div key={item.id} className="surface-card p-4">
                 <div className="font-mono text-xs text-muted-foreground mb-2">
-                  {new Date(item.timestamp).toLocaleDateString("pt-BR", {
+                  {new Date(item.created_at).toLocaleDateString("pt-BR", {
                     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
                   })}
                 </div>

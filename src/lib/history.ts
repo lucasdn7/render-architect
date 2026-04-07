@@ -1,28 +1,55 @@
-import { PromptHistoryItem } from "@/types/promptRender";
+import { supabase } from "@/integrations/supabase/client";
 
-const STORAGE_KEY = "promptrender_history";
-const MAX_ITEMS = 5;
+export interface PromptHistoryItem {
+  id: string;
+  prompt: string;
+  image_preview?: string | null;
+  render_config?: Record<string, unknown>;
+  word_count?: number;
+  created_at: string;
+}
 
-export function getHistory(): PromptHistoryItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
+export async function getHistory(): Promise<PromptHistoryItem[]> {
+  const { data, error } = await supabase
+    .from("prompt_history")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error("Error fetching history:", error);
     return [];
+  }
+
+  return (data || []) as PromptHistoryItem[];
+}
+
+export async function addToHistory(item: {
+  prompt: string;
+  imagePreview?: string;
+  renderConfig?: Record<string, unknown>;
+}): Promise<void> {
+  const wordCount = item.prompt.trim().split(/\s+/).filter(Boolean).length;
+
+  const { error } = await supabase.from("prompt_history").insert([{
+    prompt: item.prompt,
+    image_preview: item.imagePreview || null,
+    render_config: (item.renderConfig || {}) as unknown as Record<string, never>,
+    word_count: wordCount,
+  }]);
+
+  if (error) {
+    console.error("Error saving to history:", error);
   }
 }
 
-export function addToHistory(item: Omit<PromptHistoryItem, "id" | "timestamp">): void {
-  const history = getHistory();
-  const newItem: PromptHistoryItem = {
-    ...item,
-    id: crypto.randomUUID(),
-    timestamp: Date.now(),
-  };
-  const updated = [newItem, ...history].slice(0, MAX_ITEMS);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-}
+export async function clearHistory(): Promise<void> {
+  const { error } = await supabase
+    .from("prompt_history")
+    .delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all
 
-export function clearHistory(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  if (error) {
+    console.error("Error clearing history:", error);
+  }
 }
