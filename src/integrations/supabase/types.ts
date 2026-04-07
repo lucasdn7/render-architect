@@ -14,7 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      prompt_history: {
+        Row: {
+          created_at: string
+          id: string
+          image_preview: string | null
+          prompt: string
+          render_config: Json | null
+          word_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_preview?: string | null
+          prompt: string
+          render_config?: Json | null
+          word_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_preview?: string | null
+          prompt?: string
+          render_config?: Json | null
+          word_count?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
