@@ -15,19 +15,19 @@ serve(async (req) => {
   try {
     const { imageDescription, selectedPrompts, humanizationText } = await req.json();
 
-    const COMETAPI_API_KEY = Deno.env.get("COMETAPI_API_KEY");
-    const COMETAPI_MODEL = Deno.env.get("COMETAPI_MODEL") || "gpt-4o-mini";
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
 
-    if (!COMETAPI_API_KEY) throw new Error("COMETAPI_API_KEY not configured");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
 
-    const response = await fetch("https://api.cometapi.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${COMETAPI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: COMETAPI_MODEL,
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PERSONA },
           {
@@ -62,15 +62,15 @@ Rules:
         });
       }
       if (status === 401) {
-        return new Response(JSON.stringify({ error: "Chave da CometAPI inválida ou não configurada corretamente." }), {
+        return new Response(JSON.stringify({ error: "Chave da OpenAI inválida ou não configurada corretamente." }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const errorText = await response.text();
-      console.error("CometAPI error:", status, errorText);
-      throw new Error(`CometAPI error: ${status}`);
+      console.error("OpenAI error:", status, errorText);
+      throw new Error(`OpenAI error: ${status}`);
     }
 
     const data = await response.json();
