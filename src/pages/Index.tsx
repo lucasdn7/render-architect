@@ -161,7 +161,14 @@ export default function Index() {
       );
 
       update({ finalPrompt: prompt });
-      addToHistory({ prompt, imagePreview: state.imagePreview || undefined });
+      await addToHistory({
+        prompt,
+        imagePreview: state.imagePreview || undefined,
+        renderConfig: {
+          render: state.renderConfig,
+          humanization: state.humanization,
+        },
+      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao gerar prompt";
       toast.error(message);
