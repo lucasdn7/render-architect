@@ -34,7 +34,7 @@ export async function addToHistory(item: {
   const { error } = await supabase.from("prompt_history").insert([{
     prompt: item.prompt,
     image_preview: item.imagePreview || null,
-    render_config: item.renderConfig || {},
+    render_config: (item.renderConfig || {}) as unknown as Record<string, never>,
     word_count: wordCount,
   }]);
 
