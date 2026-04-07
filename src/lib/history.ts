@@ -31,12 +31,12 @@ export async function addToHistory(item: {
 }): Promise<void> {
   const wordCount = item.prompt.trim().split(/\s+/).filter(Boolean).length;
 
-  const { error } = await supabase.from("prompt_history").insert({
+  const { error } = await supabase.from("prompt_history").insert([{
     prompt: item.prompt,
     image_preview: item.imagePreview || null,
     render_config: item.renderConfig || {},
     word_count: wordCount,
-  });
+  }]);
 
   if (error) {
     console.error("Error saving to history:", error);
