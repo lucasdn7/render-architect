@@ -165,8 +165,14 @@ export const PROMPT_COMBINATIONS: Record<string, string> = {
 // HUMANIZAÇÃO
 // ─────────────────────────────────────────────
  
-export const HUMANIZATION_PROMPT = (pessoas: string, animais: string) => `
-Add lifestyle humanization to the architectural scene:
-${pessoas ? `Human presence: ${pessoas}. People must look completely natural, candid lifestyle photography style, well-integrated into the architectural setting, not posed or artificial, photorealistic human figures with realistic clothing, skin tones and natural body language, appropriate scale to architecture, no plastic or synthetic appearance.` : ""}
-${animais ? `Animal presence: ${animais}. Animals in natural relaxed behavior, photorealistic fur/skin textures, harmoniously integrated into the landscape, correct scale to environment, natural posture and expression.` : ""}
-All humanization elements must be indistinguishable from a real photograph. Do not alter the original architecture, layout or materials.
+export const HUMANIZATION_PROMPT = (pessoas: string, animais: string) => {
+  const parts: string[] = ["Add lifestyle humanization to the architectural scene:"];
+  if (pessoas) {
+    parts.push("Human presence: " + pessoas + ". People must look completely natural, candid lifestyle photography style, well-integrated into the architectural setting, not posed or artificial, photorealistic human figures with realistic clothing, skin tones and natural body language, appropriate scale to architecture, no plastic or synthetic appearance.");
+  }
+  if (animais) {
+    parts.push("Animal presence: " + animais + ". Animals in natural relaxed behavior, photorealistic fur/skin textures, harmoniously integrated into the landscape, correct scale to environment, natural posture and expression.");
+  }
+  parts.push("All humanization elements must be indistinguishable from a real photograph. Do not alter the original architecture, layout or materials.");
+  return parts.join("\n");
+}
