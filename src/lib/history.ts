@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { ensureSupabaseSession } from "@/lib/supabaseAuth";
 
 export interface PromptHistoryItem {
   id: string;
@@ -10,6 +11,8 @@ export interface PromptHistoryItem {
 }
 
 export async function getHistory(): Promise<PromptHistoryItem[]> {
+  await ensureSupabaseSession();
+
   const { data, error } = await supabase
     .from("prompt_history")
     .select("*")
@@ -29,14 +32,18 @@ export async function addToHistory(item: {
   imagePreview?: string;
   renderConfig?: Record<string, unknown>;
 }): Promise<void> {
+  await ensureSupabaseSession();
+
   const wordCount = item.prompt.trim().split(/\s+/).filter(Boolean).length;
 
-  const { error } = await supabase.from("prompt_history").insert([{
-    prompt: item.prompt,
-    image_preview: item.imagePreview || null,
-    render_config: (item.renderConfig || {}) as unknown as Record<string, never>,
-    word_count: wordCount,
-  }]);
+  const { error } = await supabase.from("prompt_history").insert([
+    {
+      prompt: item.prompt,
+      image_preview: item.imagePreview || null,
+      render_config: (item.renderConfig || {}) as unknown as Record<string, never>,
+      word_count: wordCount,
+    },
+  ]);
 
   if (error) {
     console.error("Error saving to history:", error);
@@ -44,6 +51,8 @@ export async function addToHistory(item: {
 }
 
 export async function clearHistory(): Promise<void> {
+  await ensureSupabaseSession();
+
   const { error } = await supabase
     .from("prompt_history")
     .delete()
