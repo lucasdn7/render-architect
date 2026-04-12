@@ -17,6 +17,7 @@ export interface RenderConfig {
   renderType: string;
   lighting: string;
   environments: string[];
+  surroundings: string[];
   quality: string;
   camera: string;
 }

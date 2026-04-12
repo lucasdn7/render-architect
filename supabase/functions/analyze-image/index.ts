@@ -21,19 +21,27 @@ serve(async (req) => {
       });
     }
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const API_KEY = Deno.env.get("COMET_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "test-key-replace-with-real-key";
+    const API_MODEL = Deno.env.get("COMET_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const API_BASE_URL = Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
 
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
+    if (!API_KEY || API_KEY === "test-key-replace-with-real-key") {
+      return new Response(JSON.stringify({ 
+        error: "API_KEY não configurada. Adicione sua chave da API (CometAPI ou OpenAI) nas variáveis de ambiente do Supabase." 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model: API_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PERSONA },
           {
@@ -45,22 +53,24 @@ serve(async (req) => {
               },
               {
                 type: "text",
-                text: `As an expert architect and AI prompt specialist, analyze this architectural image in extreme technical detail. Return ONLY a valid JSON object with these exact fields:
+                text: `As a world-class architect and visualization expert, conduct an exhaustive technical analysis of this architectural image. Provide exceptional detail and precision in your evaluation. Return ONLY a valid JSON object with these comprehensive fields:
+
 {
-  "IMAGE_TYPE": "type of image (3D render, real photo, sketch, floor plan...)",
-  "ARCHITECTURAL_STYLE": "precise architectural style",
-  "ENVIRONMENT": "interior, exterior or mixed",
-  "MATERIALS": "all identified materials with technical names",
-  "OBJECTS": "all objects, furniture, vegetation, elements present",
-  "LIGHTING": "lighting type, direction, quality and apparent time of day",
-  "COLORS": "dominant color palette with descriptive names",
-  "TEXTURES": "all surface textures identified",
-  "SPATIAL_COMPOSITION": "perspective type, camera angle, depth and framing",
-  "ARCHITECTURAL_DETAILS": "specific architectural elements: roof, windows, facades, structures",
-  "ATMOSPHERE": "overall mood and atmosphere of the image",
-  "FULL_DESCRIPTION": "A single cohesive paragraph of 4-6 lines describing everything above as a professional architectural render prompt in English"
+  "IMAGE_TYPE": "precise classification (photorealistic 3D render, architectural photography, concept sketch, technical drawing, floor plan, elevation, section, axonometric)",
+  "ARCHITECTURAL_STYLE": "detailed style identification (Modernist, Brutalist, Art Deco, Neoclassical, Contemporary, Parametric, Minimalist, Industrial, Scandinavian, etc.)",
+  "ENVIRONMENT": "spatial context (interior residential, interior commercial, exterior urban, exterior rural, mixed-use, public space, landscape)",
+  "MATERIALS": "comprehensive material list with technical specifications (concrete, steel, glass, wood species, stone types, composite materials, finishes, textures)",
+  "OBJECTS": "detailed inventory (furniture pieces, lighting fixtures, decorative elements, vegetation species, architectural features, structural elements)",
+  "LIGHTING": "complete lighting analysis (natural daylight, artificial lighting, time of day, light direction, intensity, color temperature, shadows, reflections)",
+  "COLORS": "sophisticated color palette (primary, secondary, accent colors with specific names and psychological impact)",
+  "TEXTURES": "detailed texture identification (smooth, rough, polished, matte, grain patterns, surface treatments, material properties)",
+  "SPATIAL_COMPOSITION": "advanced composition analysis (camera angle, lens type, perspective, depth of field, framing, scale, proportion, balance)",
+  "ARCHITECTURAL_DETAILS": "comprehensive detail catalog (structural systems, facade treatments, window types, roofing materials, joinery, connections, architectural elements)",
+  "ATMOSPHERE": "detailed atmospheric description (mood, emotional impact, sensory experience, environmental conditions, cultural context)",
+  "FULL_DESCRIPTION": "An extensive, richly detailed paragraph (8-12 lines) that synthesizes all analysis into a master architectural render prompt with exceptional technical vocabulary and artistic vision"
 }
-Return ONLY the JSON. No explanation, no markdown, no extra text.`,
+
+Provide the most thorough and detailed analysis possible. Return ONLY the JSON. No explanations, no markdown formatting, no additional text.`,
               },
             ],
           },

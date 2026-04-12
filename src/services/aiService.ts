@@ -1,12 +1,12 @@
 import { ImageAnalysis } from "@/types/promptRender";
 import { RENDER_PROMPTS, HUMANIZATION_PROMPT } from "@/config/promptsConfig";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseService } from "@/integrations/supabase/serviceClient";
 
 // ─────────────────────────────────────────────
 // STEP 02 — Analisa a imagem via Edge Function
 // ─────────────────────────────────────────────
 export async function analyzeImage(base64Image: string): Promise<ImageAnalysis> {
-  const { data, error } = await supabase.functions.invoke("analyze-image", {
+  const { data, error } = await supabaseService.functions.invoke("analyze-image", {
     body: { base64Image },
   });
 
@@ -65,7 +65,7 @@ export async function generateFinalPrompt(
     }
   }
 
-  const { data, error } = await supabase.functions.invoke("generate-prompt", {
+  const { data, error } = await supabaseService.functions.invoke("generate-prompt", {
     body: { imageDescription, selectedPrompts, humanizationText },
   });
 

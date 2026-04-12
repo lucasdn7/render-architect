@@ -1,7 +1,7 @@
 import { RenderConfig } from "@/types/promptRender";
 import {
   RENDER_TYPE_OPTIONS, LIGHTING_OPTIONS, ENVIRONMENT_OPTIONS,
-  QUALITY_OPTIONS, CAMERA_OPTIONS,
+  SURROUNDING_OPTIONS, QUALITY_OPTIONS, CAMERA_OPTIONS,
 } from "@/lib/promptMappings";
 
 interface StepConfigProps {
@@ -68,6 +68,13 @@ export default function StepConfig({ config, onChange, onNext }: StepConfigProps
     update({ environments: envs });
   };
 
+  const toggleSurroundings = (id: string) => {
+    const surs = config.surroundings.includes(id)
+      ? config.surroundings.filter((s) => s !== id)
+      : [...config.surroundings, id];
+    update({ surroundings: surs });
+  };
+
   return (
     <div className="animate-fade-up max-w-4xl mx-auto">
       <div className="text-center mb-10">
@@ -124,6 +131,23 @@ export default function StepConfig({ config, onChange, onNext }: StepConfigProps
               key={opt.id}
               selected={config.environments.includes(opt.id)}
               onClick={() => toggleEnv(opt.id)}
+              icon={opt.icon}
+              label={opt.label}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Surroundings (multi-select) */}
+      <div className="mb-10">
+        <SectionTitle>Entorno</SectionTitle>
+        <p className="text-muted-foreground font-mono text-xs mb-4">Selecione quantos desejar (opcional)</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {SURROUNDING_OPTIONS.map((opt) => (
+            <MultiOptionCard
+              key={opt.id}
+              selected={config.surroundings.includes(opt.id)}
+              onClick={() => toggleSurroundings(opt.id)}
               icon={opt.icon}
               label={opt.label}
             />

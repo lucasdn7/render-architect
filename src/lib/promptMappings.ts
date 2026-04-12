@@ -5,6 +5,8 @@ export const RENDER_TYPE_PROMPTS: Record<string, string> = {
   interior: "interior architectural render, indoor space visualization, room perspective, interior design showcase",
   aerial: "aerial drone perspective, bird's eye architectural view, top-down angle, urban planning visualization",
   detail: "architectural detail close-up, material texture focus, construction detail visualization, macro architectural photography",
+  section: "architectural section cut revealing internal spatial relationships, construction layers and material interfaces, technical drawing style with 3D depth",
+  planta_humanizada: "photorealistic humanized floor plan, top-down architectural visualization, floor plan with furniture and materials, professional plan rendering with realistic textures",
 };
 
 export const LIGHTING_PROMPTS: Record<string, string> = {
@@ -27,6 +29,14 @@ export const ENVIRONMENT_PROMPTS: Record<string, string> = {
   water_mirror: "reflective water feature, mirror pool, still water reflection of building, architectural reflection pond",
 };
 
+export const SURROUNDING_PROMPTS: Record<string, string> = {
+  residential: "residential neighborhood context, suburban atmosphere, single-family homes, quiet residential streets, family-friendly environment, well-maintained residential properties",
+  commercial: "commercial urban context, business district atmosphere, office buildings, retail storefronts, commercial street activity, urban pedestrian environment",
+  vegetation: "dense natural vegetation context, mature trees, lush landscaping, natural forest environment, botanical garden atmosphere, preserved natural landscape",
+  buildings: "urban building context, high-rise buildings, office towers, apartment complexes, contemporary architectural projects, curtain wall systems, rooftop equipment",
+  houses: "residential housing context, single-family homes, duplexes, townhouses, residential buildings, front yards, driveways, residential street infrastructure",
+};
+
 export const QUALITY_PROMPTS: Record<string, string> = {
   photorealistic: "hyper-photorealistic rendering, indistinguishable from photography, real-world materials, accurate light physics, photographic lens simulation",
   classic: "clean architectural render, soft shadow mapping, balanced exposure, professional visualization, neutral color palette",
@@ -36,8 +46,8 @@ export const QUALITY_PROMPTS: Record<string, string> = {
 
 export const CAMERA_PROMPTS: Record<string, string> = {
   eye_level: "eye-level perspective, human height camera position, natural viewing angle, standard focal length, relatable scale",
-  worms_eye: "worm's eye view, low angle camera, looking upward, monumental perspective, dramatic scale emphasis, towering presence",
-  birds_eye: "bird's eye view, aerial overhead angle, top-down perspective, urban context visible, site plan view",
+  worm_eye: "worm's eye view, low angle camera, looking upward, monumental perspective, dramatic scale emphasis, towering presence",
+  bird_eye: "bird's eye view, aerial overhead angle, top-down perspective, urban context visible, site plan view",
   dutch_angle: "dutch angle, tilted camera, diagonal composition, dynamic tension, dramatic cinematic framing",
   wide_angle: "wide-angle lens, expansive field of view, spatial depth emphasis, architectural grandeur, 14mm-24mm focal length simulation",
 };
@@ -52,45 +62,55 @@ export const ANIMAL_PROMPT_TEMPLATE = (description: string) =>
 
 // Labels for the UI (Portuguese)
 export const RENDER_TYPE_OPTIONS = [
-  { id: "exterior", label: "Render Externo", desc: "Fachada / Paisagismo", icon: "🏠" },
-  { id: "interior", label: "Render Interno", desc: "Interior / Ambientes", icon: "🛋️" },
-  { id: "aerial", label: "Render Aéreo", desc: "Drone / Vista Aérea", icon: "🚁" },
-  { id: "detail", label: "Render de Detalhe", desc: "Close-up Arquitetônico", icon: "🔍" },
+  { id: "exterior", label: "Render Externo", desc: "Fachada / Paisagismo" },
+  { id: "interior", label: "Render Interno", desc: "Interior / Ambientes" },
+  { id: "aerial", label: "Render Aéreo", desc: "Drone / Vista Aérea" },
+  { id: "detail", label: "Render de Detalhe", desc: "Close-up Arquitetônico" },
+  { id: "section", label: "Render de Corte", desc: "Seção Arquitetônica" },
+  { id: "planta_humanizada", label: "Planta Humanizada", desc: "Planta baixa humanizada" },
 ];
 
 export const LIGHTING_OPTIONS = [
-  { id: "daylight", label: "Diurno", desc: "Céu azul, luz solar direta", icon: "☀️" },
-  { id: "golden_hour", label: "Entardecer", desc: "Luz quente e dramática", icon: "🌅" },
-  { id: "night", label: "Noturno", desc: "Iluminação artificial", icon: "🌙" },
-  { id: "cloudy", label: "Nublado", desc: "Luz difusa, céu encoberto", icon: "☁️" },
-  { id: "rain", label: "Chuva", desc: "Reflexos, atmosfera cinza", icon: "🌧️" },
-  { id: "dawn", label: "Amanhecer", desc: "Tons rosados, névoa suave", icon: "🌄" },
+  { id: "daylight", label: "Diurno", desc: "Céu azul, luz solar direta" },
+  { id: "golden_hour", label: "Entardecer", desc: "Luz quente e dramática" },
+  { id: "night", label: "Noturno", desc: "Iluminação artificial" },
+  { id: "cloudy", label: "Nublado", desc: "Luz difusa, céu encoberto" },
+  { id: "rain", label: "Chuva", desc: "Reflexos, atmosfera cinza" },
+  { id: "dawn", label: "Amanhecer", desc: "Tons rosados, névoa suave" },
 ];
 
 export const ENVIRONMENT_OPTIONS = [
-  { id: "pool", label: "Piscina", icon: "🏊" },
-  { id: "garden", label: "Jardim / Paisagismo", icon: "🌿" },
-  { id: "gourmet", label: "Área Gourmet", icon: "🍽️" },
-  { id: "garage", label: "Garagem", icon: "🚗" },
-  { id: "deck", label: "Deck de Madeira", icon: "🪵" },
-  { id: "scenic_lighting", label: "Iluminação Cênica", icon: "💡" },
-  { id: "fog", label: "Névoa / Neblina", icon: "🌫️" },
-  { id: "water_mirror", label: "Espelho d'Água", icon: "💧" },
+  { id: "pool", label: "Piscina" },
+  { id: "garden", label: "Jardim / Paisagismo" },
+  { id: "gourmet", label: "Área Gourmet" },
+  { id: "garage", label: "Garagem" },
+  { id: "deck", label: "Deck de Madeira" },
+  { id: "scenic_lighting", label: "Iluminação Cênica" },
+  { id: "fog", label: "Névoa / Neblina" },
+  { id: "water_mirror", label: "Espelho d'Água" },
+];
+
+export const SURROUNDING_OPTIONS = [
+  { id: "residential", label: "Residencial", desc: "Bairro residencial, casas" },
+  { id: "commercial", label: "Comercial", desc: "Centro comercial, escritórios" },
+  { id: "vegetation", label: "Vegetação", desc: "Floresta, vegetação densa" },
+  { id: "buildings", label: "Prédios", desc: "Edifícios altos, torres" },
+  { id: "houses", label: "Casas", desc: "Residências unifamiliares" },
 ];
 
 export const QUALITY_OPTIONS = [
-  { id: "photorealistic", label: "Fotorrealista", desc: "Hiper realismo fotográfico", icon: "📸" },
-  { id: "classic", label: "Clássico", desc: "Render limpo, sombras suaves", icon: "🏛️" },
-  { id: "atmospheric", label: "Atmosférico", desc: "Drama visual, editorial", icon: "🎬" },
-  { id: "minimalist", label: "Minimalista", desc: "Fundo limpo, sem distração", icon: "◻️" },
+  { id: "photorealistic", label: "Fotorrealista", desc: "Hiper realismo fotográfico" },
+  { id: "classic", label: "Clássico", desc: "Render limpo, sombras suaves" },
+  { id: "atmospheric", label: "Atmosférico", desc: "Drama visual, editorial" },
+  { id: "minimalist", label: "Minimalista", desc: "Fundo limpo, sem distração" },
 ];
 
 export const CAMERA_OPTIONS = [
-  { id: "eye_level", label: "Eye Level", desc: "Visão humana padrão", icon: "👁️" },
-  { id: "worms_eye", label: "Worm's Eye", desc: "Câmera baixa", icon: "⬆️" },
-  { id: "birds_eye", label: "Bird's Eye", desc: "Vista aérea", icon: "🦅" },
-  { id: "dutch_angle", label: "Dutch Angle", desc: "Ângulo diagonal", icon: "📐" },
-  { id: "wide_angle", label: "Wide Angle", desc: "Grande angular", icon: "🔭" },
+  { id: "eye_level", label: "Nível do Olho", desc: "Visão humana padrão" },
+  { id: "worm_eye", label: "Olho de Verme", desc: "Câmera baixa" },
+  { id: "bird_eye", label: "Olho de Pássaro", desc: "Vista aérea" },
+  { id: "dutch_angle", label: "Ângulo Holandês", desc: "Ângulo diagonal" },
+  { id: "wide_angle", label: "Ângulo Largo", desc: "Grande angular" },
 ];
 
 // Analysis field labels for display

@@ -15,39 +15,53 @@ serve(async (req) => {
   try {
     const { imageDescription, selectedPrompts, humanizationText } = await req.json();
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const API_KEY = Deno.env.get("COMET_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "test-key-replace-with-real-key";
+    const API_MODEL = Deno.env.get("COMET_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const API_BASE_URL = Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
 
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
+    if (!API_KEY || API_KEY === "test-key-replace-with-real-key") {
+      return new Response(JSON.stringify({ 
+        error: "API_KEY não configurada. Adicione sua chave da API (CometAPI ou OpenAI) nas variáveis de ambiente do Supabase." 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model: API_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PERSONA },
           {
             role: "user",
-            content: `You are assembling the final prompt for a photorealistic architectural render. Combine the blocks below into ONE single cohesive prompt in English. Remove all redundancies, resolve contradictions, ensure perfect flow. Return ONLY the final prompt text, nothing else.
+            content: `You are a master prompt engineer creating the ultimate photorealistic architectural render prompt. Synthesize all information below into a comprehensive, detailed, and technically precise prompt. Focus on visual excellence, architectural accuracy, and artistic composition.
 
-## IMAGE DESCRIPTION:
+## IMAGE ANALYSIS:
 ${imageDescription}
 
-## RENDER CONFIGURATIONS:
+## RENDER ENHANCEMENTS:
 ${Array.isArray(selectedPrompts) ? selectedPrompts.join(", ") : selectedPrompts}
 
-${humanizationText ? `## HUMANIZATION:\n${humanizationText}` : ""}
+${humanizationText ? `## HUMAN ELEMENTS:\n${humanizationText}` : ""}
 
-Rules:
-- Single continuous text, no line breaks
-- Comma-separated technical terms
-- Most important architectural elements first
-- End with technical render parameters
-- Maximum 200 words`,
+## PROMPT ENGINEERING RULES:
+- Create a rich, descriptive paragraph with exceptional detail
+- Include specific materials, lighting techniques, and atmospheric conditions
+- Incorporate professional photography and 3D rendering terminology
+- Emphasize architectural style and spatial composition
+- Add camera angles, lens specifications, and render engine details
+- Include color grading, post-processing, and artistic direction
+- No character limits - prioritize quality over brevity
+- Use advanced architectural and visualization vocabulary
+- Ensure the prompt generates award-winning architectural imagery
+
+Create a masterpiece prompt that will produce stunning, photorealistic architectural renders with incredible detail and artistic vision.`,
           },
         ],
       }),
@@ -62,15 +76,15 @@ Rules:
         });
       }
       if (status === 401) {
-        return new Response(JSON.stringify({ error: "Chave da OpenAI inválida ou não configurada corretamente." }), {
+        return new Response(JSON.stringify({ error: "Chave da API inválida ou não configurada corretamente." }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const errorText = await response.text();
-      console.error("OpenAI error:", status, errorText);
-      throw new Error(`OpenAI error: ${status}`);
+      console.error("API error:", status, errorText);
+      throw new Error(`API error: ${status}`);
     }
 
     const data = await response.json();

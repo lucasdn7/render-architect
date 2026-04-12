@@ -31,6 +31,7 @@ const initialState: WizardState = {
     renderType: "",
     lighting: "",
     environments: [],
+    surroundings: [],
     quality: "",
     camera: "",
   },
@@ -94,6 +95,8 @@ export default function Index() {
       interior: "render_interno",
       aerial: "render_aereo",
       detail: "render_detalhe",
+      section: "render_corte",
+      planta_humanizada: "planta_humanizada",
     };
     const lightingMap: Record<string, string> = {
       daylight: "diurno",
@@ -112,6 +115,13 @@ export default function Index() {
       scenic_lighting: "iluminacao_cenica",
       fog: "nevoa",
       water_mirror: "espelho_dagua",
+    };
+    const surroundingsMap: Record<string, string> = {
+      residential: "entorno_residencial",
+      commercial: "entorno_comercial",
+      vegetation: "entorno_vegetacao",
+      buildings: "entorno_predios",
+      houses: "entorno_casas",
     };
     const qualityMap: Record<string, string> = {
       photorealistic: "fotorrealista",
@@ -135,6 +145,9 @@ export default function Index() {
     }
     for (const env of renderConfig.environments) {
       if (envMap[env]) keys.push(envMap[env]);
+    }
+    for (const sur of renderConfig.surroundings) {
+      if (surroundingsMap[sur]) keys.push(surroundingsMap[sur]);
     }
     if (renderConfig.quality && qualityMap[renderConfig.quality]) {
       keys.push(qualityMap[renderConfig.quality]);
