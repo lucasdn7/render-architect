@@ -67,7 +67,7 @@ export default function Landing() {
           </a>
         </div>
         <p className="mt-6 font-mono text-xs" style={{ color: "#C9A84C" }}>
-          ✦ 3 prompts gratuitos ao criar sua conta ✦
+          ✦ 5 prompts gratuitos ao criar sua conta ✦
         </p>
       </section>
 
@@ -165,7 +165,7 @@ export default function Landing() {
 
         <div className="grid md:grid-cols-3 gap-5">
           {[
-            { name: "Gratuito", price: "R$ 0", features: ["3 prompts para começar", "Análise de imagem por IA", "Sem cartão de crédito"], cta: "Começar grátis", primary: false },
+            { name: "Gratuito", price: "R$ 0", features: ["5 prompts para começar", "Upload de imagem + análise IA", "Sem cartão de crédito"], cta: "Começar grátis", primary: false },
             { name: "Starter", price: "R$ 29", per: "/mês", features: ["30 prompts por mês", "Upload de imagem + análise IA", "Histórico completo", "Sem marca d'água"], cta: "Assinar Starter", primary: true, popular: true },
             { name: "Pro", price: "R$ 79", per: "/mês", features: ["100 prompts por mês", "Tudo do Starter", "Exportar em .txt", "Prompts favoritos"], cta: "Assinar Pro", primary: false },
           ].map((p) => (
@@ -232,7 +232,7 @@ export default function Landing() {
             Criar conta grátis <ArrowRight className="w-4 h-4" />
           </button>
           <p className="mt-5 font-mono text-[11px]" style={{ color: "#888" }}>
-            Sem cartão de crédito • 3 prompts gratuitos • Cancele quando quiser
+            Sem cartão de crédito • 5 prompts gratuitos • Cancele quando quiser
           </p>
         </div>
       </section>

@@ -73,22 +73,28 @@ export type Database = {
       }
       user_credits: {
         Row: {
+          bonus_credits: number
           credits: number
           id: string
+          subscription_plan: string | null
           total_used: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          bonus_credits?: number
           credits?: number
           id?: string
+          subscription_plan?: string | null
           total_used?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          bonus_credits?: number
           credits?: number
           id?: string
+          subscription_plan?: string | null
           total_used?: number
           updated_at?: string
           user_id?: string
@@ -100,7 +106,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      consume_credit: { Args: never; Returns: boolean }
+      consume_credit: {
+        Args: never
+        Returns: {
+          consumed: boolean
+          credit_type: "one_off" | "plan" | null
+          effective_plan: "free" | "starter" | "pro"
+        }
+      }
     }
     Enums: {
       [_ in never]: never

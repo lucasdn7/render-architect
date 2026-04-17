@@ -1,12 +1,15 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { PlanTier } from "@/config/planPermissions";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
   credits: number | null;
+  bonusCredits: number;
+  currentPlan: PlanTier;
   refreshCredits: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -18,6 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [credits, setCredits] = useState<number | null>(null);
+  const [bonusCredits, setBonusCredits] = useState(0);
+  const [currentPlan, setCurrentPlan] = useState<PlanTier>("free");
 
   const refreshCredits = useCallback(async () => {
     const { data: { user: u } } = await supabase.auth.getUser();
@@ -25,8 +30,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCredits(null);
       return;
     }
-    const { data } = await supabase.from("user_credits").select("credits").eq("user_id", u.id).maybeSingle();
-    setCredits(data?.credits ?? 0);
+    const { data } = await supabase
+      .from("user_credits")
+      .select("credits, bonus_credits, subscription_plan")
+      .eq("user_id", u.id)
+      .maybeSingle();
+
+    const baseCredits = data?.credits ?? 0;
+    const oneOffCredits = data?.bonus_credits ?? 0;
+
+    setCredits(baseCredits + oneOffCredits);
+    setBonusCredits(oneOffCredits);
+    setCurrentPlan((data?.subscription_plan as PlanTier | null) ?? "free");
   }, []);
 
   useEffect(() => {
@@ -37,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTimeout(() => { refreshCredits(); }, 0);
       } else {
         setCredits(null);
+        setBonusCredits(0);
+        setCurrentPlan("free");
       }
     });
 
@@ -55,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, credits, refreshCredits, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, credits, bonusCredits, currentPlan, refreshCredits, signOut }}>
       {children}
     </AuthContext.Provider>
   );
