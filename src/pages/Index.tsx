@@ -227,14 +227,29 @@ export default function Index() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setHistoryOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
-          style={{ border: "1px solid hsl(var(--border))" }}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          Histórico
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs"
+            style={{ background: "rgba(201,168,76,0.08)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.2)" }}>
+            <Sparkles className="w-3.5 h-3.5" />
+            {credits ?? 0} créditos
+          </div>
+          <button
+            onClick={() => setHistoryOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
+            style={{ border: "1px solid hsl(var(--border))" }}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            Histórico
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
+            style={{ border: "1px solid hsl(var(--border))" }}
+            title="Sair"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
