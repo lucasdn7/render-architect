@@ -16,6 +16,7 @@ import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getEffectivePlan, mapRenderConfigToPromptKeys, PlanTier } from "@/config/planPermissions";
+import { consumeCreditFallbackCompat } from "@/lib/creditCompat";
 
 const STEP_LABELS = ["Upload", "Análise", "Configurar", "Humanizar", "Resultado"];
 
@@ -185,7 +186,14 @@ export default function Index() {
     let finalConsumption = parsedConsumption;
     if (cErr || !parsedConsumption.consumed) {
       // Compatibilidade para ambientes com função consume_credit legada/inconsistente.
-      finalConsumption = await consumeCreditFallback();
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      if (!userId) {
+        toast.error("Sessão inválida. Faça login novamente.");
+        return;
+      }
+
+      finalConsumption = await consumeCreditFallbackCompat(userId);
       if (!finalConsumption.consumed) {
         toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
         return;

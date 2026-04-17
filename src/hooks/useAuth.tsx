@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { PlanTier } from "@/config/planPermissions";
+import { fetchCreditSnapshot } from "@/lib/creditCompat";
 
 interface AuthContextValue {
   user: User | null;
@@ -30,55 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCredits(null);
       return;
     }
+    const snapshot = await fetchCreditSnapshot(u.id);
 
-    const loadProfile = async () => {
-      const primary = await supabase
-        .from("profiles")
-        .select("id, user_id, prompt_credits, avulso_credits, plan")
-        .eq("user_id", u.id)
-        .maybeSingle();
-
-      if (primary.data) return primary.data;
-
-      const legacy = await supabase
-        .from("profiles")
-        .select("id, user_id, prompt_credits, avulso_credits, plan")
-        .eq("id", u.id)
-        .maybeSingle();
-
-      return legacy.data ?? null;
-    };
-
-    let profile = await loadProfile();
-
-    // Auto-provision profile if missing to avoid user ficar com 0 créditos por ausência de linha.
-    if (!profile) {
-      const displayName =
-        (u.user_metadata?.display_name as string | undefined) ||
-        (u.user_metadata?.full_name as string | undefined) ||
-        u.email?.split("@")[0] ||
-        "Usuário";
-
-      await supabase.from("profiles").upsert({
-        user_id: u.id,
-        display_name: displayName,
-        email: u.email ?? null,
-        plan: "free",
-        prompt_credits: 5,
-        avulso_credits: 0,
-        role: "user",
-        updated_at: new Date().toISOString(),
-      });
-
-      profile = await loadProfile();
-    }
-
-    const baseCredits = profile?.prompt_credits ?? 5;
-    const oneOffCredits = profile?.avulso_credits ?? 0;
-
-    setCredits(Math.max(0, baseCredits + oneOffCredits));
-    setBonusCredits(Math.max(0, oneOffCredits));
-    setCurrentPlan((profile?.plan as PlanTier | null) ?? "free");
+    setCredits(Math.max(0, snapshot.baseCredits + snapshot.bonusCredits));
+    setBonusCredits(Math.max(0, snapshot.bonusCredits));
+    setCurrentPlan((snapshot.plan as PlanTier | null) ?? "free");
   }, []);
 
   useEffect(() => {
