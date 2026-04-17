@@ -16,87 +16,27 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
-          avulso_credits: number
-          credits_reset_at: string | null
           created_at: string
           display_name: string | null
           email: string | null
           id: string
-          plan: string
-          prompt_credits: number
-          role: string
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          avulso_credits?: number
-          credits_reset_at?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
-          plan?: string
-          prompt_credits?: number
-          role?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          avulso_credits?: number
-          credits_reset_at?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
-          plan?: string
-          prompt_credits?: number
-          role?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
           updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      pix_orders: {
-        Row: {
-          amount_brl: number
-          confirmed_at: string | null
-          created_at: string
-          credits_amount: number | null
-          id: string
-          notes: string | null
-          plan: string | null
-          status: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          amount_brl: number
-          confirmed_at?: string | null
-          created_at?: string
-          credits_amount?: number | null
-          id?: string
-          notes?: string | null
-          plan?: string | null
-          status?: string
-          type: string
-          user_id: string
-        }
-        Update: {
-          amount_brl?: number
-          confirmed_at?: string | null
-          created_at?: string
-          credits_amount?: number | null
-          id?: string
-          notes?: string | null
-          plan?: string | null
-          status?: string
-          type?: string
           user_id?: string
         }
         Relationships: []
@@ -133,28 +73,22 @@ export type Database = {
       }
       user_credits: {
         Row: {
-          bonus_credits: number
           credits: number
           id: string
-          subscription_plan: string | null
           total_used: number
           updated_at: string
           user_id: string
         }
         Insert: {
-          bonus_credits?: number
           credits?: number
           id?: string
-          subscription_plan?: string | null
           total_used?: number
           updated_at?: string
           user_id: string
         }
         Update: {
-          bonus_credits?: number
           credits?: number
           id?: string
-          subscription_plan?: string | null
           total_used?: number
           updated_at?: string
           user_id?: string
@@ -166,14 +100,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      consume_credit: {
-        Args: never
-        Returns: {
-          consumed: boolean
-          credit_type: "avulso" | "plan" | null
-          effective_plan: "free" | "starter" | "pro"
-        }
-      }
+      consume_credit: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
