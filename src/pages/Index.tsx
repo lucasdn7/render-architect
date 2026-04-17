@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import { Clock, Box } from "lucide-react";
+import { Clock, Box, LogOut, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import WizardProgress from "@/components/WizardProgress";
 import StepUpload from "@/components/StepUpload";
 import StepAnalysis from "@/components/StepAnalysis";
@@ -8,9 +9,11 @@ import StepConfig from "@/components/StepConfig";
 import StepHumanization from "@/components/StepHumanization";
 import StepResult from "@/components/StepResult";
 import HistoryPanel from "@/components/HistoryPanel";
-import { WizardState, ImageAnalysis } from "@/types/promptRender";
+import { WizardState } from "@/types/promptRender";
 import { addToHistory } from "@/lib/history";
 import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const STEP_LABELS = ["Upload", "Análise", "Configurar", "Humanizar", "Resultado"];
 
@@ -50,6 +53,8 @@ export default function Index() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const navigate = useNavigate();
+  const { credits, refreshCredits, signOut } = useAuth();
 
   const update = useCallback((partial: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -160,6 +165,13 @@ export default function Index() {
   };
 
   const handleGeneratePrompt = async () => {
+    const { data: consumed, error: cErr } = await supabase.rpc("consume_credit");
+    if (cErr || !consumed) {
+      toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
+      return;
+    }
+    await refreshCredits();
+
     setIsGenerating(true);
     update({ currentStep: 4 });
 
@@ -191,6 +203,11 @@ export default function Index() {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   const handleReset = () => setState(initialState);
 
   return (
@@ -210,14 +227,29 @@ export default function Index() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setHistoryOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
-          style={{ border: "1px solid hsl(var(--border))" }}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          Histórico
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs"
+            style={{ background: "rgba(201,168,76,0.08)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.2)" }}>
+            <Sparkles className="w-3.5 h-3.5" />
+            {credits ?? 0} créditos
+          </div>
+          <button
+            onClick={() => setHistoryOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
+            style={{ border: "1px solid hsl(var(--border))" }}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            Histórico
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
+            style={{ border: "1px solid hsl(var(--border))" }}
+            title="Sair"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}

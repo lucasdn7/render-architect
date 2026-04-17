@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { ensureSupabaseSession } from "@/lib/supabaseAuth";
 
 export interface PromptHistoryItem {
   id: string;
@@ -11,19 +10,20 @@ export interface PromptHistoryItem {
 }
 
 export async function getHistory(): Promise<PromptHistoryItem[]> {
-  await ensureSupabaseSession();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
 
   const { data, error } = await supabase
     .from("prompt_history")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(20);
 
   if (error) {
     console.error("Error fetching history:", error);
     return [];
   }
-
   return (data || []) as PromptHistoryItem[];
 }
 
@@ -32,12 +32,14 @@ export async function addToHistory(item: {
   imagePreview?: string;
   renderConfig?: Record<string, unknown>;
 }): Promise<void> {
-  await ensureSupabaseSession();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
   const wordCount = item.prompt.trim().split(/\s+/).filter(Boolean).length;
 
   const { error } = await supabase.from("prompt_history").insert([
     {
+      user_id: user.id,
       prompt: item.prompt,
       image_preview: item.imagePreview || null,
       render_config: (item.renderConfig || {}) as unknown as Record<string, never>,
@@ -45,20 +47,17 @@ export async function addToHistory(item: {
     },
   ]);
 
-  if (error) {
-    console.error("Error saving to history:", error);
-  }
+  if (error) console.error("Error saving to history:", error);
 }
 
 export async function clearHistory(): Promise<void> {
-  await ensureSupabaseSession();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
   const { error } = await supabase
     .from("prompt_history")
     .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all
+    .eq("user_id", user.id);
 
-  if (error) {
-    console.error("Error clearing history:", error);
-  }
+  if (error) console.error("Error clearing history:", error);
 }

@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       prompt_history: {
         Row: {
           created_at: string
@@ -21,6 +48,7 @@ export type Database = {
           image_preview: string | null
           prompt: string
           render_config: Json | null
+          user_id: string | null
           word_count: number | null
         }
         Insert: {
@@ -29,6 +57,7 @@ export type Database = {
           image_preview?: string | null
           prompt: string
           render_config?: Json | null
+          user_id?: string | null
           word_count?: number | null
         }
         Update: {
@@ -37,7 +66,32 @@ export type Database = {
           image_preview?: string | null
           prompt?: string
           render_config?: Json | null
+          user_id?: string | null
           word_count?: number | null
+        }
+        Relationships: []
+      }
+      user_credits: {
+        Row: {
+          credits: number
+          id: string
+          total_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          credits?: number
+          id?: string
+          total_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          credits?: number
+          id?: string
+          total_used?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -46,7 +100,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_credit: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
