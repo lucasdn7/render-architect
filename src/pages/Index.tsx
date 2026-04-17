@@ -95,11 +95,101 @@ export default function Index() {
 
   const getSelectedKeys = (): string[] => mapRenderConfigToPromptKeys(state.renderConfig);
 
+  const consumeCreditFallback = async (): Promise<{
+    consumed: boolean;
+    credit_type: "avulso" | "plan" | null;
+    effective_plan: PlanTier;
+  }> => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+    if (!userId) {
+      return { consumed: false, credit_type: null, effective_plan: effectivePlan };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("prompt_credits, avulso_credits, plan")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!profile) {
+      return { consumed: false, credit_type: null, effective_plan: effectivePlan };
+    }
+
+    const avulso = profile.avulso_credits ?? 0;
+    const promptCredits = profile.prompt_credits ?? 0;
+    const plan = (profile.plan as PlanTier | null) ?? "free";
+
+    if (avulso > 0) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          avulso_credits: avulso - 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      if (error) return { consumed: false, credit_type: null, effective_plan: plan };
+      return { consumed: true, credit_type: "avulso", effective_plan: "pro" };
+    }
+
+    if (promptCredits > 0) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          prompt_credits: promptCredits - 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      if (error) return { consumed: false, credit_type: null, effective_plan: plan };
+      return { consumed: true, credit_type: "plan", effective_plan: plan };
+    }
+
+    return { consumed: false, credit_type: null, effective_plan: plan };
+  };
+
   const handleGeneratePrompt = async () => {
-    const { data: consumption, error: cErr } = await supabase.rpc("consume_credit");
-    if (cErr || !consumption?.consumed) {
-      toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
-      return;
+    const { data: consumptionRaw, error: cErr } = await supabase.rpc("consume_credit");
+
+    const parsedConsumption = (() => {
+      if (typeof consumptionRaw === "boolean") {
+        return {
+          consumed: consumptionRaw,
+          credit_type: "plan" as const,
+          effective_plan: effectivePlan,
+        };
+      }
+
+      if (consumptionRaw && typeof consumptionRaw === "object" && "consumed" in consumptionRaw) {
+        const payload = consumptionRaw as {
+          consumed?: boolean;
+          credit_type?: "avulso" | "plan" | null;
+          effective_plan?: PlanTier | null;
+        };
+
+        return {
+          consumed: Boolean(payload.consumed),
+          credit_type: payload.credit_type ?? "plan",
+          effective_plan: payload.effective_plan ?? effectivePlan,
+        };
+      }
+
+      return {
+        consumed: false,
+        credit_type: null as "avulso" | "plan" | null,
+        effective_plan: effectivePlan,
+      };
+    })();
+
+    let finalConsumption = parsedConsumption;
+    if (cErr || !parsedConsumption.consumed) {
+      // Compatibilidade para ambientes com função consume_credit legada/inconsistente.
+      finalConsumption = await consumeCreditFallback();
+      if (!finalConsumption.consumed) {
+        toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
+        return;
+      }
     }
     await refreshCredits();
 
@@ -109,7 +199,7 @@ export default function Index() {
     try {
       const selectedKeys = getSelectedKeys();
       const imageDescription = state.analysis?.FULL_DESCRIPTION || "";
-      const generationPlan = (consumption.effective_plan as PlanTier | null) ?? effectivePlan;
+      const generationPlan = (finalConsumption.effective_plan as PlanTier | null) ?? effectivePlan;
 
       const prompt = await generateFinalPrompt(
         imageDescription,
@@ -125,7 +215,7 @@ export default function Index() {
         renderConfig: {
           render: state.renderConfig,
           humanization: state.humanization,
-          creditType: consumption.credit_type,
+          creditType: finalConsumption.credit_type,
           effectivePlan: generationPlan,
         },
       });
