@@ -53,6 +53,8 @@ export default function Index() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const navigate = useNavigate();
+  const { credits, refreshCredits, signOut } = useAuth();
 
   const update = useCallback((partial: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -163,6 +165,13 @@ export default function Index() {
   };
 
   const handleGeneratePrompt = async () => {
+    const { data: consumed, error: cErr } = await supabase.rpc("consume_credit");
+    if (cErr || !consumed) {
+      toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
+      return;
+    }
+    await refreshCredits();
+
     setIsGenerating(true);
     update({ currentStep: 4 });
 
@@ -192,6 +201,11 @@ export default function Index() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
   };
 
   const handleReset = () => setState(initialState);
