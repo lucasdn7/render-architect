@@ -15,6 +15,7 @@ import { addToHistory } from "@/lib/history";
 import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectivePlan, mapRenderConfigToPromptKeys, PlanTier } from "@/config/planPermissions";
 
 const STEP_LABELS = ["Upload", "Análise", "Configurar", "Humanizar", "Resultado"];
 
@@ -55,7 +56,8 @@ export default function Index() {
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
-  const { credits, refreshCredits, signOut } = useAuth();
+  const { credits, refreshCredits, currentPlan, bonusCredits } = useAuth();
+  const effectivePlan = getEffectivePlan(currentPlan, bonusCredits > 0);
 
   const update = useCallback((partial: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -91,83 +93,11 @@ export default function Index() {
     }
   };
 
-  const getSelectedKeys = (): string[] => {
-    const { renderConfig } = state;
-    const keys: string[] = [];
-
-    // Map existing config IDs to promptsConfig keys
-    const renderTypeMap: Record<string, string> = {
-      exterior: "render_externo",
-      interior: "render_interno",
-      aerial: "render_aereo",
-      detail: "render_detalhe",
-      section: "render_corte",
-      planta_humanizada: "planta_humanizada",
-    };
-    const lightingMap: Record<string, string> = {
-      daylight: "diurno",
-      golden_hour: "entardecer",
-      night: "noturno",
-      cloudy: "nublado",
-      rain: "chuva",
-      dawn: "amanhecer",
-    };
-    const envMap: Record<string, string> = {
-      pool: "piscina",
-      garden: "jardim",
-      gourmet: "area_gourmet",
-      garage: "garagem",
-      deck: "deck",
-      scenic_lighting: "iluminacao_cenica",
-      fog: "nevoa",
-      water_mirror: "espelho_dagua",
-    };
-    const surroundingsMap: Record<string, string> = {
-      residential: "entorno_residencial",
-      commercial: "entorno_comercial",
-      vegetation: "entorno_vegetacao",
-      buildings: "entorno_predios",
-      houses: "entorno_casas",
-    };
-    const qualityMap: Record<string, string> = {
-      photorealistic: "fotorrealista",
-      classic: "classico",
-      atmospheric: "atmosferico",
-      minimalist: "minimalista",
-    };
-    const cameraMap: Record<string, string> = {
-      eye_level: "eye_level",
-      worms_eye: "worm_eye",
-      birds_eye: "bird_eye",
-      dutch_angle: "dutch_angle",
-      wide_angle: "wide_angle",
-    };
-
-    if (renderConfig.renderType && renderTypeMap[renderConfig.renderType]) {
-      keys.push(renderTypeMap[renderConfig.renderType]);
-    }
-    if (renderConfig.lighting && lightingMap[renderConfig.lighting]) {
-      keys.push(lightingMap[renderConfig.lighting]);
-    }
-    for (const env of renderConfig.environments) {
-      if (envMap[env]) keys.push(envMap[env]);
-    }
-    for (const sur of renderConfig.surroundings) {
-      if (surroundingsMap[sur]) keys.push(surroundingsMap[sur]);
-    }
-    if (renderConfig.quality && qualityMap[renderConfig.quality]) {
-      keys.push(qualityMap[renderConfig.quality]);
-    }
-    if (renderConfig.camera && cameraMap[renderConfig.camera]) {
-      keys.push(cameraMap[renderConfig.camera]);
-    }
-
-    return keys;
-  };
+  const getSelectedKeys = (): string[] => mapRenderConfigToPromptKeys(state.renderConfig);
 
   const handleGeneratePrompt = async () => {
-    const { data: consumed, error: cErr } = await supabase.rpc("consume_credit");
-    if (cErr || !consumed) {
+    const { data: consumption, error: cErr } = await supabase.rpc("consume_credit");
+    if (cErr || !consumption?.consumed) {
       toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
       return;
     }
@@ -179,10 +109,12 @@ export default function Index() {
     try {
       const selectedKeys = getSelectedKeys();
       const imageDescription = state.analysis?.FULL_DESCRIPTION || "";
+      const generationPlan = (consumption.effective_plan as PlanTier | null) ?? effectivePlan;
 
       const prompt = await generateFinalPrompt(
         imageDescription,
         selectedKeys,
+        generationPlan,
         state.humanization
       );
 
@@ -193,6 +125,8 @@ export default function Index() {
         renderConfig: {
           render: state.renderConfig,
           humanization: state.humanization,
+          creditType: consumption.credit_type,
+          effectivePlan: generationPlan,
         },
       });
     } catch (err: unknown) {
@@ -248,6 +182,7 @@ export default function Index() {
             config={state.renderConfig}
             onChange={(renderConfig) => update({ renderConfig })}
             onNext={() => goToStep(3)}
+            effectivePlan={effectivePlan}
           />
         )}
 

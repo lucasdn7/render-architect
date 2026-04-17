@@ -145,6 +145,17 @@
     box-shadow: 0 0 20px hsl(var(--gold) / 0.1);
   }
 
+  .render-option.render-option-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-style: dashed;
+  }
+
+  .render-option.render-option-disabled:hover {
+    border-color: hsl(var(--border));
+    background: hsl(var(--surface-1));
+  }
+
   .prompt-output {
     @apply p-6 rounded-xl border font-mono text-sm leading-relaxed;
     background: hsl(var(--surface-1));

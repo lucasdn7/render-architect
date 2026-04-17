@@ -1,6 +1,7 @@
 import { ImageAnalysis } from "@/types/promptRender";
 import { RENDER_PROMPTS, HUMANIZATION_PROMPT } from "@/config/promptsConfig";
 import { supabaseService } from "@/integrations/supabase/serviceClient";
+import { PlanTier, validateSelectedPromptKeysByPlan } from "@/config/planPermissions";
 
 // ─────────────────────────────────────────────
 // STEP 02 — Analisa a imagem via Edge Function
@@ -39,6 +40,7 @@ export function formatHumanization(
 export async function generateFinalPrompt(
   imageDescription: string,
   selectedKeys: string[],
+  effectivePlan: PlanTier,
   humanization: {
     enabled: boolean;
     addPeople: boolean;
@@ -47,6 +49,11 @@ export async function generateFinalPrompt(
     animalDescription: string;
   }
 ): Promise<string> {
+  const validation = validateSelectedPromptKeysByPlan(selectedKeys, effectivePlan);
+  if (!validation.valid) {
+    throw new Error("Algumas opções selecionadas exigem plano Pro. Ajuste as configurações e tente novamente.");
+  }
+
   // Build selected prompts from keys
   const selectedPrompts = selectedKeys
     .map((key) => RENDER_PROMPTS[key])
