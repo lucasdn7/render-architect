@@ -1,9 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type PaymentMode = "subscription" | "payment";
+export type CheckoutProductCode = "starter" | "pro" | "credits_10" | "credits_30" | "credits_100";
 
 export interface CheckoutPayload {
-  priceId: string;
+  productCode: CheckoutProductCode;
   mode: PaymentMode;
 }
 

@@ -3,7 +3,7 @@ import ProfileLayout from "@/components/ProfileLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { createStripeCheckoutSession, createPixOrder } from "@/lib/payments";
+import { CheckoutProductCode, createStripeCheckoutSession, createPixOrder } from "@/lib/payments";
 import { buildPixQrCodeUrl, generatePixPayload } from "@/lib/pix";
 
 interface CreditPackage {
@@ -24,8 +24,8 @@ interface Plan {
 }
 
 type ProductSelection =
-  | { type: "subscription"; plan: "starter" | "pro"; label: string; amountBrl: number; stripePriceId?: string }
-  | { type: "credits"; credits: 10 | 30 | 100; label: string; amountBrl: number; stripePriceId?: string };
+  | { type: "subscription"; plan: "starter" | "pro"; label: string; amountBrl: number; productCode: CheckoutProductCode }
+  | { type: "credits"; credits: 10 | 30 | 100; label: string; amountBrl: number; productCode: CheckoutProductCode };
 
 interface PixState {
   orderId: string;
@@ -34,14 +34,6 @@ interface PixState {
   qrCodeUrl: string;
   label: string;
 }
-
-const STRIPE_PRICES = {
-  starter: import.meta.env.VITE_STRIPE_PRICE_STARTER,
-  pro: import.meta.env.VITE_STRIPE_PRICE_PRO,
-  credits10: import.meta.env.VITE_STRIPE_PRICE_CREDITS_10,
-  credits30: import.meta.env.VITE_STRIPE_PRICE_CREDITS_30,
-  credits100: import.meta.env.VITE_STRIPE_PRICE_CREDITS_100,
-};
 
 const PIX_KEY = import.meta.env.VITE_PIX_KEY || "";
 
@@ -123,18 +115,18 @@ export default function Credits() {
   };
 
   const handleUpgradePlan = (planId: "starter" | "pro") => {
-    const priceId = planId === "starter" ? STRIPE_PRICES.starter : STRIPE_PRICES.pro;
     const label = planId === "starter" ? "Plano Starter" : "Plano Pro";
     const amountBrl = planId === "starter" ? 29 : 79;
+    const productCode: CheckoutProductCode = planId === "starter" ? "starter" : "pro";
 
-    openPaymentModal({ type: "subscription", plan: planId, label, amountBrl, stripePriceId: priceId });
+    openPaymentModal({ type: "subscription", plan: planId, label, amountBrl, productCode });
   };
 
   const handlePurchaseCredits = (pkg: CreditPackage) => {
-    const priceIdMap = {
-      10: STRIPE_PRICES.credits10,
-      30: STRIPE_PRICES.credits30,
-      100: STRIPE_PRICES.credits100,
+    const productCodeMap: Record<10 | 30 | 100, CheckoutProductCode> = {
+      10: "credits_10",
+      30: "credits_30",
+      100: "credits_100",
     } as const;
 
     openPaymentModal({
@@ -142,22 +134,18 @@ export default function Credits() {
       credits: pkg.credits,
       label: `${pkg.credits} créditos avulsos`,
       amountBrl: pkg.price,
-      stripePriceId: priceIdMap[pkg.credits],
+      productCode: productCodeMap[pkg.credits],
     });
   };
 
   const handleStripePayment = async () => {
     if (!selectedProduct) return;
-    if (!selectedProduct.stripePriceId) {
-      toast.error("Price ID não configurado. Revise suas variáveis de ambiente Stripe.");
-      return;
-    }
 
     try {
       setCheckoutLoading(true);
       const mode = selectedProduct.type === "subscription" ? "subscription" : "payment";
       const checkoutUrl = await createStripeCheckoutSession({
-        priceId: selectedProduct.stripePriceId,
+        productCode: selectedProduct.productCode,
         mode,
       });
       window.location.href = checkoutUrl;

@@ -42,11 +42,6 @@ Depois, copie os `price_...` e configure as variáveis de ambiente do frontend e
 
 ### Frontend (.env)
 - `VITE_STRIPE_PUBLISHABLE_KEY`
-- `VITE_STRIPE_PRICE_STARTER`
-- `VITE_STRIPE_PRICE_PRO`
-- `VITE_STRIPE_PRICE_CREDITS_10`
-- `VITE_STRIPE_PRICE_CREDITS_30`
-- `VITE_STRIPE_PRICE_CREDITS_100`
 - `VITE_PIX_KEY`
 
 ### Supabase Secrets (Edge Functions)

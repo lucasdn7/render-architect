@@ -25,14 +25,26 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Usuário não autenticado");
 
-    const { priceId, mode, successUrl, cancelUrl } = await req.json();
+    const { productCode, mode, successUrl, cancelUrl } = await req.json();
 
-    if (!priceId || !mode || !successUrl || !cancelUrl) {
-      throw new Error("Payload inválido: priceId, mode, successUrl e cancelUrl são obrigatórios");
+    if (!productCode || !mode || !successUrl || !cancelUrl) {
+      throw new Error("Payload inválido: productCode, mode, successUrl e cancelUrl são obrigatórios");
     }
 
     if (mode !== "subscription" && mode !== "payment") {
       throw new Error("mode deve ser subscription ou payment");
+    }
+
+    const priceMap: Record<string, string | undefined> = {
+      starter: Deno.env.get("STRIPE_PRICE_STARTER"),
+      pro: Deno.env.get("STRIPE_PRICE_PRO"),
+      credits_10: Deno.env.get("STRIPE_PRICE_CREDITS_10"),
+      credits_30: Deno.env.get("STRIPE_PRICE_CREDITS_30"),
+      credits_100: Deno.env.get("STRIPE_PRICE_CREDITS_100"),
+    };
+    const priceId = priceMap[productCode];
+    if (!priceId) {
+      throw new Error(`Price ID não configurado para productCode=${productCode}. Verifique os secrets STRIPE_PRICE_* no Supabase.`);
     }
 
     const body = new URLSearchParams();
@@ -44,6 +56,7 @@ serve(async (req) => {
     body.append("customer_email", user.email || "");
     body.append("metadata[userId]", user.id);
     body.append("metadata[priceId]", priceId);
+    body.append("metadata[productCode]", productCode);
 
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
