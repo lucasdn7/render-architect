@@ -65,20 +65,22 @@ export default function History() {
     }
   };
 
+  const getConfig = (p: PromptHistory) =>
+    p.render_config && typeof p.render_config === 'object' && !Array.isArray(p.render_config)
+      ? (p.render_config as any)
+      : {};
+  const toStr = (v: any) => (typeof v === 'string' ? v : '');
+  const toArr = (v: any) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
+
   const filterPrompts = () => {
     let filtered = prompts;
 
-    // Filter by render type
     if (activeFilter !== "Todos") {
-      filtered = filtered.filter(p => {
-        const config = typeof p.render_config === 'object' ? p.render_config as any : {};
-        return config.render === activeFilter;
-      });
+      filtered = filtered.filter(p => toStr(getConfig(p).renderType) === activeFilter);
     }
 
-    // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(p => 
+      filtered = filtered.filter(p =>
         p.prompt.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -99,8 +101,7 @@ export default function History() {
   };
 
   const regeneratePrompt = (promptData: PromptHistory) => {
-    const config = typeof promptData.render_config === 'object' ? promptData.render_config as any : {};
-    sessionStorage.setItem('regenerateConfig', JSON.stringify(config));
+    sessionStorage.setItem('regenerateConfig', JSON.stringify(getConfig(promptData)));
     navigate('/');
   };
 
@@ -115,25 +116,10 @@ export default function History() {
     });
   };
 
-  const getRenderType = (promptData: PromptHistory) => {
-    const config = typeof promptData.render_config === 'object' ? promptData.render_config as any : {};
-    return config.render || 'Render Externo';
-  };
-
-  const getLighting = (promptData: PromptHistory) => {
-    const config = typeof promptData.render_config === 'object' ? promptData.render_config as any : {};
-    return config.lighting || 'Diurno';
-  };
-
-  const getEnvironments = (promptData: PromptHistory) => {
-    const config = typeof promptData.render_config === 'object' ? promptData.render_config as any : {};
-    return config.environments || [];
-  };
-
-  const getSurroundings = (promptData: PromptHistory) => {
-    const config = typeof promptData.render_config === 'object' ? promptData.render_config as any : {};
-    return config.surroundings || [];
-  };
+  const getRenderType = (p: PromptHistory) => toStr(getConfig(p).renderType) || 'Render Externo';
+  const getLighting = (p: PromptHistory) => toStr(getConfig(p).lighting) || 'Diurno';
+  const getEnvironments = (p: PromptHistory) => toArr(getConfig(p).environments);
+  const getSurroundings = (p: PromptHistory) => toArr(getConfig(p).surroundings);
 
   // Pagination
   const totalPages = Math.ceil(filteredPrompts.length / itemsPerPage);
