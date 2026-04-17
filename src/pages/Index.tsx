@@ -16,6 +16,7 @@ import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getEffectivePlan, mapRenderConfigToPromptKeys, PlanTier } from "@/config/planPermissions";
+import { consumeCreditFallbackCompat } from "@/lib/creditCompat";
 
 const STEP_LABELS = ["Upload", "Análise", "Configurar", "Humanizar", "Resultado"];
 
@@ -96,10 +97,53 @@ export default function Index() {
   const getSelectedKeys = (): string[] => mapRenderConfigToPromptKeys(state.renderConfig);
 
   const handleGeneratePrompt = async () => {
-    const { data: consumption, error: cErr } = await supabase.rpc("consume_credit");
-    if (cErr || !consumption?.consumed) {
-      toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
-      return;
+    const { data: consumptionRaw, error: cErr } = await supabase.rpc("consume_credit");
+
+    const parsedConsumption = (() => {
+      if (typeof consumptionRaw === "boolean") {
+        return {
+          consumed: consumptionRaw,
+          credit_type: "plan" as const,
+          effective_plan: effectivePlan,
+        };
+      }
+
+      if (consumptionRaw && typeof consumptionRaw === "object" && "consumed" in consumptionRaw) {
+        const payload = consumptionRaw as {
+          consumed?: boolean;
+          credit_type?: "avulso" | "plan" | null;
+          effective_plan?: PlanTier | null;
+        };
+
+        return {
+          consumed: Boolean(payload.consumed),
+          credit_type: payload.credit_type ?? "plan",
+          effective_plan: payload.effective_plan ?? effectivePlan,
+        };
+      }
+
+      return {
+        consumed: false,
+        credit_type: null as "avulso" | "plan" | null,
+        effective_plan: effectivePlan,
+      };
+    })();
+
+    let finalConsumption = parsedConsumption;
+    if (cErr || !parsedConsumption.consumed) {
+      // Compatibilidade para ambientes com função consume_credit legada/inconsistente.
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      if (!userId) {
+        toast.error("Sessão inválida. Faça login novamente.");
+        return;
+      }
+
+      finalConsumption = await consumeCreditFallbackCompat(userId);
+      if (!finalConsumption.consumed) {
+        toast.error("Você não tem créditos disponíveis. Faça upgrade para continuar.");
+        return;
+      }
     }
     await refreshCredits();
 
@@ -109,7 +153,7 @@ export default function Index() {
     try {
       const selectedKeys = getSelectedKeys();
       const imageDescription = state.analysis?.FULL_DESCRIPTION || "";
-      const generationPlan = (consumption.effective_plan as PlanTier | null) ?? effectivePlan;
+      const generationPlan = (finalConsumption.effective_plan as PlanTier | null) ?? effectivePlan;
 
       const prompt = await generateFinalPrompt(
         imageDescription,
@@ -125,7 +169,7 @@ export default function Index() {
         renderConfig: {
           render: state.renderConfig,
           humanization: state.humanization,
-          creditType: consumption.credit_type,
+          creditType: finalConsumption.credit_type,
           effectivePlan: generationPlan,
         },
       });

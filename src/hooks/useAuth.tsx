@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { PlanTier } from "@/config/planPermissions";
+import { fetchCreditSnapshot } from "@/lib/creditCompat";
 
 interface AuthContextValue {
   user: User | null;
@@ -30,18 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCredits(null);
       return;
     }
-    const { data } = await supabase
-      .from("profiles")
-      .select("prompt_credits, avulso_credits, plan")
-      .eq("user_id", u.id)
-      .maybeSingle();
+    const snapshot = await fetchCreditSnapshot(u.id);
 
-    const baseCredits = data?.prompt_credits ?? 0;
-    const oneOffCredits = data?.avulso_credits ?? 0;
-
-    setCredits(baseCredits + oneOffCredits);
-    setBonusCredits(oneOffCredits);
-    setCurrentPlan((data?.plan as PlanTier | null) ?? "free");
+    setCredits(Math.max(0, snapshot.baseCredits + snapshot.bonusCredits));
+    setBonusCredits(Math.max(0, snapshot.bonusCredits));
+    setCurrentPlan((snapshot.plan as PlanTier | null) ?? "free");
   }, []);
 
   useEffect(() => {
