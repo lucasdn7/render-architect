@@ -31,17 +31,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const { data } = await supabase
-      .from("user_credits")
-      .select("credits, bonus_credits, subscription_plan")
+      .from("profiles")
+      .select("prompt_credits, avulso_credits, plan")
       .eq("user_id", u.id)
       .maybeSingle();
 
-    const baseCredits = data?.credits ?? 0;
-    const oneOffCredits = data?.bonus_credits ?? 0;
+    const baseCredits = data?.prompt_credits ?? 0;
+    const oneOffCredits = data?.avulso_credits ?? 0;
 
     setCredits(baseCredits + oneOffCredits);
     setBonusCredits(oneOffCredits);
-    setCurrentPlan((data?.subscription_plan as PlanTier | null) ?? "free");
+    setCurrentPlan((data?.plan as PlanTier | null) ?? "free");
   }, []);
 
   useEffect(() => {
