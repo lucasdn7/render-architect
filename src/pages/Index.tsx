@@ -96,6 +96,60 @@ export default function Index() {
 
   const getSelectedKeys = (): string[] => mapRenderConfigToPromptKeys(state.renderConfig);
 
+  const consumeCreditFallback = async (): Promise<{
+    consumed: boolean;
+    credit_type: "avulso" | "plan" | null;
+    effective_plan: PlanTier;
+  }> => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+    if (!userId) {
+      return { consumed: false, credit_type: null, effective_plan: effectivePlan };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("prompt_credits, avulso_credits, plan")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!profile) {
+      return { consumed: false, credit_type: null, effective_plan: effectivePlan };
+    }
+
+    const avulso = profile.avulso_credits ?? 0;
+    const promptCredits = profile.prompt_credits ?? 0;
+    const plan = (profile.plan as PlanTier | null) ?? "free";
+
+    if (avulso > 0) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          avulso_credits: avulso - 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      if (error) return { consumed: false, credit_type: null, effective_plan: plan };
+      return { consumed: true, credit_type: "avulso", effective_plan: "pro" };
+    }
+
+    if (promptCredits > 0) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          prompt_credits: promptCredits - 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      if (error) return { consumed: false, credit_type: null, effective_plan: plan };
+      return { consumed: true, credit_type: "plan", effective_plan: plan };
+    }
+
+    return { consumed: false, credit_type: null, effective_plan: plan };
+  };
+
   const handleGeneratePrompt = async () => {
     const { data: consumptionRaw, error: cErr } = await supabase.rpc("consume_credit");
 
