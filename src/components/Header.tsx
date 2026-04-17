@@ -104,7 +104,7 @@ export default function Header({ credits, onHistoryOpen, showStepper = true }: H
                     className="fixed inset-0 z-10" 
                     onClick={() => setDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 top-full mt-2 w-64 rounded-lg shadow-2xl border"
+                  <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg shadow-2xl border"
                     style={{ 
                       background: "#111111", 
                       borderColor: "#1e1e1e",
