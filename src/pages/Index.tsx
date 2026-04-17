@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
-import { Clock, Box, LogOut, Sparkles } from "lucide-react";
+import { Box } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import Header from "@/components/Header";
 import WizardProgress from "@/components/WizardProgress";
 import StepUpload from "@/components/StepUpload";
 import StepAnalysis from "@/components/StepAnalysis";
@@ -203,54 +204,17 @@ export default function Index() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
-
+  
   const handleReset = () => setState(initialState);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center gold-gradient">
-            <Box className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="font-display text-lg font-semibold leading-none" style={{ lineHeight: 1 }}>
-              Prompt<span className="gold-text">Render</span>
-            </h1>
-            <p className="font-mono text-[10px] text-muted-foreground tracking-wider uppercase">
-              Architectural AI Prompts
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs"
-            style={{ background: "rgba(201,168,76,0.08)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.2)" }}>
-            <Sparkles className="w-3.5 h-3.5" />
-            {credits ?? 0} créditos
-          </div>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
-            style={{ border: "1px solid hsl(var(--border))" }}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            Histórico
-          </button>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
-            style={{ border: "1px solid hsl(var(--border))" }}
-            title="Sair"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </header>
+      <Header 
+        credits={credits} 
+        onHistoryOpen={() => setHistoryOpen(true)} 
+        showStepper={true}
+      />
 
       {/* Main Content */}
       <main className="px-6 py-10 max-w-5xl mx-auto">

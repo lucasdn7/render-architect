@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Clock, ArrowRight, Upload, Sparkles, Settings, FileText } from "lucide-react";
+import { ArrowRight, Upload, Sparkles, Settings, FileText } from "lucide-react";
+import Header from "@/components/Header";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -31,32 +32,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a", color: "#fff" }}>
       {/* Header */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${scrolled ? "backdrop-blur-md" : ""}`}
-        style={{
-          background: scrolled ? "rgba(10,10,10,0.8)" : "transparent",
-          borderBottom: scrolled ? "1px solid #1e1e1e" : "1px solid transparent",
-        }}
-      >
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center gold-gradient">
-              <Box className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <h1 className="font-display text-lg font-semibold">
-              Prompt<span style={{ color: "#C9A84C" }}>Render</span>
-            </h1>
-          </div>
-          <button
-            onClick={goToApp}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs transition-colors hover:text-foreground"
-            style={{ border: "1px solid #1e1e1e", color: "#888" }}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
-      </header>
+      <Header showStepper={false} />
 
       {/* HERO */}
       <section className="pt-40 pb-24 px-6 text-center max-w-4xl mx-auto animate-fade-up">
@@ -265,8 +241,8 @@ export default function Landing() {
       <footer className="px-6 py-8" style={{ borderTop: "1px solid #1e1e1e" }}>
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 font-mono text-xs" style={{ color: "#888" }}>
-            <div className="w-6 h-6 rounded gold-gradient flex items-center justify-center">
-              <Box className="w-3 h-3 text-primary-foreground" />
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: "#C9A84C" }}>
+              <div className="w-3 h-3 bg-black rounded-sm" />
             </div>
             © 2025 PromptRender
           </div>

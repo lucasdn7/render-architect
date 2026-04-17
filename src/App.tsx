@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/perfil/creditos" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/perfil/historico" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/perfil/configuracoes" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
