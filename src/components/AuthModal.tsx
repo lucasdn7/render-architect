@@ -52,7 +52,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
       toast.error(error.message);
       return;
     }
-    toast.success("✦ 3 créditos gratuitos adicionados à sua conta");
+    toast.success("✦ 5 créditos gratuitos adicionados à sua conta");
     onSuccess?.();
     onClose();
   };
@@ -82,7 +82,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
           Entre no <span className="gold-text">PromptRender</span>
         </DialogTitle>
         <DialogDescription className="font-mono text-xs text-muted-foreground">
-          Crie sua conta e ganhe 3 prompts gratuitos
+          Crie sua conta e ganhe 5 prompts gratuitos
         </DialogDescription>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")}>

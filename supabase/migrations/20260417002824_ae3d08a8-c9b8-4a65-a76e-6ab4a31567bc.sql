@@ -21,7 +21,7 @@ CREATE POLICY "Users can insert own profile" ON public.profiles
 CREATE TABLE public.user_credits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  credits INTEGER NOT NULL DEFAULT 3,
+  credits INTEGER NOT NULL DEFAULT 5,
   total_used INTEGER NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -45,7 +45,7 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
     NEW.email
   );
-  INSERT INTO public.user_credits (user_id, credits) VALUES (NEW.id, 3);
+  INSERT INTO public.user_credits (user_id, credits) VALUES (NEW.id, 5);
   RETURN NEW;
 END;
 $$;

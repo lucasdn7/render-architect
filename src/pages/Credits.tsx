@@ -56,8 +56,8 @@ export default function Credits() {
       name: "Gratuito",
       price: 0,
       features: [
-        "3 prompts para começar",
-        "Análise de imagem por IA"
+        "5 prompts para começar",
+        "Upload + análise IA"
       ],
       current: true
     },
@@ -96,8 +96,14 @@ export default function Credits() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get current plan from user metadata or database
-      const plan = plans.find(p => p.id === 'free'); // Replace with actual plan logic
+      const { data: creditsData } = await supabase
+        .from('user_credits')
+        .select('subscription_plan')
+        .eq('user_id', user.id)
+        .single();
+
+      const currentPlanId = creditsData?.subscription_plan || 'free';
+      const plan = plans.find(p => p.id === currentPlanId);
       setCurrentPlan(plan || null);
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -307,7 +313,7 @@ export default function Credits() {
             CRÉDITOS AVULSOS
           </div>
           <div className="font-mono text-xs text-muted-foreground mb-4">
-            Não expiram · Somam com os créditos do plano
+            Não expiram · Somam com os créditos do plano · Cada crédito avulso libera recursos de Pro ao consumir
           </div>
           <div className="grid grid-cols-3 gap-4">
             {creditPackages.map((pkg) => (
