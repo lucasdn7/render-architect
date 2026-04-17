@@ -14,6 +14,36 @@ interface UserSettings {
   };
 }
 
+type SchemaProbeStatus = "idle" | "ok" | "error";
+
+interface SupabaseProbeResult {
+  table: string;
+  status: SchemaProbeStatus;
+  count: number | null;
+  error?: string;
+}
+
+const DASHBOARD_ONLY_TABLES = [
+  "analytics_events",
+  "collection_items",
+  "collections",
+  "custom_prompts",
+  "daily_analytics",
+  "favorites",
+  "feedbacks",
+  "gallery",
+  "gallery_likes",
+  "generation_sessions",
+  "notifications",
+  "plans",
+  "prompt_template_versions",
+  "prompt_templates",
+  "shared_prompts",
+  "usage_logs",
+  "usage_today",
+  "user_settings",
+] as const;
+
 export default function Settings() {
   const [settings, setSettings] = useState<UserSettings>({
     fullName: '',
@@ -38,6 +68,11 @@ export default function Settings() {
     minLength: false,
     hasNumber: false
   });
+  const [schemaLoading, setSchemaLoading] = useState(false);
+  const [schemaResults, setSchemaResults] = useState<SupabaseProbeResult[]>([]);
+  const [selectedTable, setSelectedTable] = useState<string>("collections");
+  const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
+  const [tableRowsLoading, setTableRowsLoading] = useState(false);
 
   useEffect(() => {
     loadUserSettings();
@@ -172,6 +207,68 @@ export default function Settings() {
     } catch (error) {
       console.error('Error deleting account:', error);
       toast.error('Erro ao excluir conta');
+    }
+  };
+
+  const runSchemaProbe = async () => {
+    try {
+      setSchemaLoading(true);
+      const checks = await Promise.all(
+        DASHBOARD_ONLY_TABLES.map(async (table) => {
+          const { count, error } = await supabase
+            .from(table as never)
+            .select("*", { count: "exact", head: true });
+
+          if (error) {
+            return {
+              table,
+              status: "error" as const,
+              count: null,
+              error: error.message,
+            };
+          }
+
+          return {
+            table,
+            status: "ok" as const,
+            count: count ?? 0,
+          };
+        }),
+      );
+
+      setSchemaResults(checks);
+
+      const failed = checks.filter((item) => item.status === "error").length;
+      if (failed > 0) {
+        toast.warning(`Diagnóstico concluído com ${failed} tabela(s) com erro de acesso.`);
+      } else {
+        toast.success("Diagnóstico concluído: todas as tabelas responderam.");
+      }
+    } catch (error) {
+      console.error("Error probing Supabase schema:", error);
+      toast.error("Falha ao executar o diagnóstico de schema.");
+    } finally {
+      setSchemaLoading(false);
+    }
+  };
+
+  const loadSelectedTableRows = async () => {
+    try {
+      setTableRowsLoading(true);
+      const { data, error } = await supabase
+        .from(selectedTable as never)
+        .select("*")
+        .limit(20);
+
+      if (error) throw error;
+      setTableRows((data ?? []) as Record<string, unknown>[]);
+      toast.success(`Leitura da tabela ${selectedTable} concluída.`);
+    } catch (error) {
+      console.error("Error loading table rows:", error);
+      setTableRows([]);
+      toast.error("Não foi possível carregar os registros da tabela selecionada.");
+    } finally {
+      setTableRowsLoading(false);
     }
   };
 
@@ -492,6 +589,93 @@ export default function Settings() {
             >
               Excluir conta
             </button>
+          </div>
+        </div>
+
+        {/* Supabase Schema Tools */}
+        <div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="font-mono text-xs font-medium" style={{ color: "#C9A84C" }}>
+              FERRAMENTAS SUPABASE
+            </div>
+            <div className="flex-1 h-px" style={{ background: "#1e1e1e" }} />
+          </div>
+
+          <div className="p-7 rounded-xl border space-y-6" style={{ background: "#111111", borderColor: "#1e1e1e" }}>
+            <div className="space-y-3">
+              <div className="font-mono text-sm text-white">Diagnóstico de tabelas extras (Dashboard)</div>
+              <div className="font-mono text-xs text-muted-foreground">
+                Verifica conectividade/leitura das tabelas que existem hoje no Supabase e não estavam no histórico de migration.
+              </div>
+              <button
+                onClick={runSchemaProbe}
+                disabled={schemaLoading}
+                className="px-5 py-2 rounded-lg font-mono text-xs font-bold transition-colors duration-200"
+                style={{ background: "#C9A84C", color: "#000", opacity: schemaLoading ? 0.7 : 1 }}
+              >
+                {schemaLoading ? "Executando diagnóstico..." : "Executar diagnóstico"}
+              </button>
+            </div>
+
+            {schemaResults.length > 0 && (
+              <div className="rounded-lg border overflow-hidden" style={{ borderColor: "#1e1e1e" }}>
+                <div className="grid grid-cols-12 px-4 py-2 font-mono text-[11px]" style={{ background: "#0f0f0f", color: "#888" }}>
+                  <div className="col-span-5">Tabela</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Registros</div>
+                  <div className="col-span-3">Erro</div>
+                </div>
+                {schemaResults.map((result) => (
+                  <div
+                    key={result.table}
+                    className="grid grid-cols-12 px-4 py-2 border-t font-mono text-xs"
+                    style={{ borderColor: "#1e1e1e" }}
+                  >
+                    <div className="col-span-5 text-white">{result.table}</div>
+                    <div className="col-span-2" style={{ color: result.status === "ok" ? "#4caf50" : "#c0392b" }}>
+                      {result.status === "ok" ? "OK" : "ERRO"}
+                    </div>
+                    <div className="col-span-2 text-muted-foreground">{result.count ?? "-"}</div>
+                    <div className="col-span-3 text-muted-foreground truncate">{result.error ?? "-"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="font-mono text-sm text-white">Explorador de dados (somente leitura)</div>
+              <div className="font-mono text-xs text-muted-foreground">
+                Consulta até 20 registros da tabela selecionada conforme permissões RLS do usuário logado.
+              </div>
+              <div className="flex gap-3">
+                <select
+                  value={selectedTable}
+                  onChange={(event) => setSelectedTable(event.target.value)}
+                  className="px-3 py-2 rounded-lg font-mono text-xs"
+                  style={{ background: "#0d0d0d", border: "1px solid #1e1e1e", color: "#FFFFFF" }}
+                >
+                  {DASHBOARD_ONLY_TABLES.map((table) => (
+                    <option key={table} value={table}>
+                      {table}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={loadSelectedTableRows}
+                  disabled={tableRowsLoading}
+                  className="px-5 py-2 rounded-lg font-mono text-xs font-bold transition-colors duration-200"
+                  style={{ border: "1px solid #C9A84C", color: "#C9A84C" }}
+                >
+                  {tableRowsLoading ? "Consultando..." : "Carregar registros"}
+                </button>
+              </div>
+              <pre
+                className="max-h-80 overflow-auto p-4 rounded-lg text-[11px] leading-relaxed"
+                style={{ background: "#0d0d0d", border: "1px solid #1e1e1e", color: "#d0d0d0" }}
+              >
+                {tableRows.length === 0 ? "[]" : JSON.stringify(tableRows, null, 2)}
+              </pre>
+            </div>
           </div>
         </div>
 
