@@ -146,7 +146,7 @@ export default function Header({ credits, onHistoryOpen, showStepper = true }: H
                       
                       <button
                         onClick={() => {
-                          navigate("/perfil/creditos");
+                          navigate("/creditos");
                           setDropdownOpen(false);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors duration-200"
@@ -166,7 +166,7 @@ export default function Header({ credits, onHistoryOpen, showStepper = true }: H
                       
                       <button
                         onClick={() => {
-                          onHistoryOpen?.();
+                          navigate("/historico");
                           setDropdownOpen(false);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors duration-200"
@@ -186,7 +186,7 @@ export default function Header({ credits, onHistoryOpen, showStepper = true }: H
                       
                       <button
                         onClick={() => {
-                          navigate("/perfil/configuracoes");
+                          navigate("/configuracoes");
                           setDropdownOpen(false);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors duration-200"

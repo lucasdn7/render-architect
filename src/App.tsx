@@ -6,7 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
-import Profile from "./pages/Profile";
+import ProfileHome from "./pages/ProfileHome";
+import Credits from "./pages/Credits";
+import History from "./pages/History";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,10 +31,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/perfil/creditos" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/perfil/historico" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/perfil/configuracoes" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/perfil" element={<ProtectedRoute><ProfileHome /></ProtectedRoute>} />
+            <Route path="/creditos" element={<ProtectedRoute><Credits /></ProtectedRoute>} />
+            <Route path="/historico" element={<ProtectedRoute><History /></ProtectedRoute>} />
+            <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
