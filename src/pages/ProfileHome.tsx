@@ -74,13 +74,15 @@ export default function ProfileHome() {
         credits,
         maxCredits,
         recentPrompts: prompts?.map(p => {
-          const config = typeof p.render_config === 'object' ? p.render_config as any : {};
+          const config = (p.render_config && typeof p.render_config === 'object' && !Array.isArray(p.render_config)) ? p.render_config as any : {};
+          const toStr = (v: any) => (typeof v === 'string' ? v : '');
+          const toArr = (v: any) => Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
           return {
             id: p.id,
-            type: config?.render || 'Render Externo',
-            lighting: config?.lighting || 'Diurno',
-            environments: config?.environments || [],
-            surroundings: config?.surroundings || [],
+            type: toStr(config?.renderType) || 'Render Externo',
+            lighting: toStr(config?.lighting) || 'Diurno',
+            environments: toArr(config?.environments),
+            surroundings: toArr(config?.surroundings),
             created_at: p.created_at,
             prompt: p.prompt || ''
           };
