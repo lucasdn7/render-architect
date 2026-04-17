@@ -50,14 +50,14 @@ export default function ProfileHome() {
 
       if (error) throw error;
 
-      // Get user credits
+      // Get user plan + credits
       const { data: creditsData } = await supabase
-        .from('user_credits')
-        .select('credits')
+        .from('profiles')
+        .select('prompt_credits, avulso_credits, plan')
         .eq('user_id', user.id)
         .single();
 
-      const credits = creditsData?.credits || 3;
+      const credits = (creditsData?.prompt_credits || 5) + (creditsData?.avulso_credits || 0);
       const maxCredits = 30; // Replace with plan-based max
 
       // Calculate member since date
@@ -69,7 +69,7 @@ export default function ProfileHome() {
       setStats({
         totalPrompts: prompts?.length || 0,
         memberSince,
-        planType: 'starter', // Replace with actual plan from user metadata
+        planType: (creditsData?.plan as "free" | "starter" | "pro") || 'free',
         planRenewal: '15/05/2025', // Replace with actual renewal date
         credits,
         maxCredits,

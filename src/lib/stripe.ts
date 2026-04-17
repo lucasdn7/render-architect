@@ -1,0 +1,7 @@
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
+if (!STRIPE_PUBLISHABLE_KEY) {
+  console.warn("VITE_STRIPE_PUBLISHABLE_KEY não configurada.");
+}
+
+export { STRIPE_PUBLISHABLE_KEY };
