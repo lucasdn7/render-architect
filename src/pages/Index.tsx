@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import { Clock, Box } from "lucide-react";
+import { Clock, Box, LogOut, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import WizardProgress from "@/components/WizardProgress";
 import StepUpload from "@/components/StepUpload";
 import StepAnalysis from "@/components/StepAnalysis";
@@ -8,9 +9,11 @@ import StepConfig from "@/components/StepConfig";
 import StepHumanization from "@/components/StepHumanization";
 import StepResult from "@/components/StepResult";
 import HistoryPanel from "@/components/HistoryPanel";
-import { WizardState, ImageAnalysis } from "@/types/promptRender";
+import { WizardState } from "@/types/promptRender";
 import { addToHistory } from "@/lib/history";
 import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const STEP_LABELS = ["Upload", "Análise", "Configurar", "Humanizar", "Resultado"];
 
