@@ -92,6 +92,7 @@ serve(async (req) => {
         const plan = getPlanByPriceId(priceId);
         if (!plan) throw new Error("Price de assinatura não reconhecido");
 
+        // Update profiles table for backward compatibility
         await supabase
           .from("profiles")
           .update({
@@ -103,12 +104,28 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", userId);
+
+        // Update user_credits table (new system)
+        await supabase
+          .from("user_credits")
+          .upsert({
+            user_id: userId,
+            credits: PLAN_CREDITS[plan],
+            total_used: 0,
+            subscription_plan: plan,
+            bonus_credits: 0,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'user_id',
+            doUpdate: 'credits, subscription_plan, updated_at'
+          });
       }
 
       if (session.mode === "payment") {
         const creditsToAdd = getCreditsPackageByPriceId(priceId);
         if (!creditsToAdd) throw new Error("Price de créditos avulsos não reconhecido");
 
+        // Update profiles table for backward compatibility
         const { data: profile } = await supabase
           .from("profiles")
           .select("avulso_credits")
@@ -124,11 +141,30 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", userId);
+
+        // Update user_credits table (new system)
+        const { data: userCredit } = await supabase
+          .from("user_credits")
+          .select("bonus_credits")
+          .eq("user_id", userId)
+          .single();
+
+        const currentBonus = userCredit?.bonus_credits ?? 0;
+
+        await supabase
+          .from("user_credits")
+          .update({
+            bonus_credits: currentBonus + creditsToAdd,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
       }
     }
 
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object;
+      
+      // Update profiles table for backward compatibility
       await supabase
         .from("profiles")
         .update({
@@ -138,6 +174,22 @@ serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("stripe_subscription_id", subscription.id);
+
+      // Update user_credits table (new system)
+      await supabase
+        .from("user_credits")
+        .update({
+          subscription_plan: "free",
+          credits: PLAN_CREDITS.free,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", (
+          await supabase
+            .from("profiles")
+            .select("user_id")
+            .eq("stripe_subscription_id", subscription.id)
+            .single()
+        )?.user_id);
     }
 
     if (event.type === "invoice.payment_failed") {
