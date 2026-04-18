@@ -59,12 +59,29 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
 
   const handleGoogle = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    
+    // Tentar login via Supabase OAuth direto
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
     });
-    if (result.error) {
-      setLoading(false);
-      toast.error("Erro ao entrar com Google");
+    
+    setLoading(false);
+    
+    if (error) {
+      console.error("Google OAuth error:", error);
+      
+      // Fallback para Lovable se Supabase OAuth falhar
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      
+      if (result.error) {
+        toast.error("Login com Google não disponível. Use email e senha.");
+        console.error("Lovable OAuth error:", result.error);
+      }
     }
   };
 
