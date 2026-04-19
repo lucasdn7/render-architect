@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-user-token",
 };
 
 serve(async (req) => {
@@ -20,12 +20,16 @@ serve(async (req) => {
     if (!supabaseAnonKey) throw new Error("SUPABASE_ANON_KEY não configurada");
     if (!stripeSecretKey) throw new Error("STRIPE_SECRET_KEY não configurada");
 
-    // Criar client Supabase com auth do usuário (usando headers da requisição)
-    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
-    console.log("[create-checkout-session] Auth header presente:", authHeader ? "SIM" : "NÃO");
+    // Obter token do header customizado (evita problema UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM)
+    const userToken = req.headers.get("x-user-token") || req.headers.get("X-User-Token");
+    console.log("[create-checkout-session] X-User-Token presente:", userToken ? "SIM" : "NÃO");
+
+    if (!userToken) {
+      throw new Error("Token de autenticação ausente. Faça login novamente.");
+    }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: authHeader ? { headers: { Authorization: authHeader } } : undefined,
+      global: { headers: { Authorization: `Bearer ${userToken}` } },
     });
 
     // Verificar usuário autenticado

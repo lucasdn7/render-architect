@@ -12,15 +12,33 @@ export async function createStripeCheckoutSession(payload: CheckoutPayload): Pro
   const successUrl = `${window.location.origin}/creditos?checkout=success`;
   const cancelUrl = `${window.location.origin}/creditos?checkout=cancel`;
 
-  const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-    body: {
+  // Obter sessão atual para enviar token
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+
+  if (!accessToken) throw new Error("Usuário não autenticado");
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-User-Token": accessToken,
+    },
+    body: JSON.stringify({
       ...payload,
       successUrl,
       cancelUrl,
-    },
+    }),
   });
 
-  if (error) throw new Error(error.message || "Erro ao iniciar checkout");
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Erro ao iniciar checkout");
+  }
+
   if (!data?.url) throw new Error("URL de checkout não retornada");
 
   return data.url as string;
