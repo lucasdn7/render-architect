@@ -10,20 +10,42 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    console.log("[create-checkout-session] Request recebida");
+    console.log("[create-checkout-session] Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
+
     const authHeader = req.headers.get("Authorization");
+    console.log("[create-checkout-session] Auth header:", authHeader ? "Presente" : "AUSENTE");
+
     if (!authHeader) throw new Error("Token de autenticação ausente");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+
+    console.log("[create-checkout-session] SUPABASE_URL:", supabaseUrl ? "Configurado" : "AUSENTE");
+    console.log("[create-checkout-session] SUPABASE_ANON_KEY:", supabaseAnonKey ? "Configurado" : "AUSENTE");
+    console.log("[create-checkout-session] STRIPE_SECRET_KEY:", stripeSecretKey ? "Configurado" : "AUSENTE");
+
+    if (!supabaseUrl) throw new Error("SUPABASE_URL não configurada");
+    if (!supabaseAnonKey) throw new Error("SUPABASE_ANON_KEY não configurada");
     if (!stripeSecretKey) throw new Error("STRIPE_SECRET_KEY não configurada");
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
+    console.log("[create-checkout-session] Client Supabase criado, verificando usuário...");
+
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error("Usuário não autenticado");
+
+    console.log("[create-checkout-session] getUser resultado:", user ? "Usuário encontrado" : "Usuário NÃO encontrado", "Erro:", userError ? userError.message : "Nenhum");
+
+    if (userError || !user) {
+      console.error("[create-checkout-session] Erro de autenticação:", userError);
+      throw new Error("Usuário não autenticado");
+    }
+
+    console.log("[create-checkout-session] Usuário autenticado:", user.email);
 
     const { productCode, mode, successUrl, cancelUrl } = await req.json();
 
