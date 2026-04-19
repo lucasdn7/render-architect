@@ -145,6 +145,23 @@ export default function StepConfig({ config, onChange, onNext, effectivePlan }: 
       </div>
 
       <div className="mb-10">
+        <SectionTitle>Qualidade / Estilo de Render</SectionTitle>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {QUALITY_OPTIONS.map((opt) => (
+            <OptionCard
+              key={opt.id}
+              selected={config.quality === opt.id}
+              onClick={() => update({ quality: opt.id })}
+              label={opt.label}
+              desc={opt.desc}
+              disabled={!isOptionAllowed(effectivePlan, "quality", opt.id)}
+              lockLabel={lockedLabel}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-10">
         <SectionTitle>Elementos do Ambiente</SectionTitle>
         <p className="text-muted-foreground font-mono text-xs mb-4">Selecione quantos desejar</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -172,23 +189,6 @@ export default function StepConfig({ config, onChange, onNext, effectivePlan }: 
               onClick={() => toggleSurroundings(opt.id)}
               label={opt.label}
               disabled={!isOptionAllowed(effectivePlan, "surroundings", opt.id)}
-              lockLabel={lockedLabel}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-10">
-        <SectionTitle>Qualidade / Estilo</SectionTitle>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {QUALITY_OPTIONS.map((opt) => (
-            <OptionCard
-              key={opt.id}
-              selected={config.quality === opt.id}
-              onClick={() => update({ quality: opt.id })}
-              label={opt.label}
-              desc={opt.desc}
-              disabled={!isOptionAllowed(effectivePlan, "quality", opt.id)}
               lockLabel={lockedLabel}
             />
           ))}
