@@ -20,9 +20,18 @@ serve(async (req) => {
     if (!supabaseAnonKey) throw new Error("SUPABASE_ANON_KEY não configurada");
     if (!stripeSecretKey) throw new Error("STRIPE_SECRET_KEY não configurada");
 
+    // Logar todos os headers recebidos para debug
+    const allHeaders: Record<string, string> = {};
+    req.headers.forEach((value, key) => { allHeaders[key] = value; });
+    console.log("[create-checkout-session] Headers recebidos:", JSON.stringify(allHeaders));
+
     // Obter token do header customizado (evita problema UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM)
-    const userToken = req.headers.get("x-user-token") || req.headers.get("X-User-Token");
-    console.log("[create-checkout-session] X-User-Token presente:", userToken ? "SIM" : "NÃO");
+    const userToken = req.headers.get("x-user-token") ||
+                      req.headers.get("X-User-Token") ||
+                      req.headers.get("x-user-token") ||
+                      allHeaders["x-user-token"] ||
+                      allHeaders["X-User-Token"];
+    console.log("[create-checkout-session] X-User-Token presente:", userToken ? "SIM (len=" + userToken.length + ")" : "NÃO");
 
     if (!userToken) {
       throw new Error("Token de autenticação ausente. Faça login novamente.");
