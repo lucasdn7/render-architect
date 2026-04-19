@@ -47,10 +47,19 @@ supabase functions deploy generate-prompt
 ```
 
 ### 5) Configurar segredo da IA nas Edge Functions
-As duas funções leem `LOVABLE_API_KEY`.
+As duas funções leem `COMET_API_KEY` (recomendado) ou `OPENAI_API_KEY`.
 
 ```bash
-supabase secrets set LOVABLE_API_KEY="SUA_CHAVE"
+supabase secrets set COMET_API_KEY="SUA_CHAVE"
+supabase secrets set COMET_MODEL="gpt-4o-mini"
+supabase secrets set COMET_API_URL="https://api.cometapi.com"
+```
+
+Alternativa:
+
+```bash
+supabase secrets set OPENAI_API_KEY="SUA_CHAVE"
+supabase secrets set OPENAI_MODEL="gpt-4o-mini"
 ```
 
 ## Solução de problemas (db push)

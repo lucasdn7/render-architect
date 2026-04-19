@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -60,7 +59,6 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
   const handleGoogle = async () => {
     setLoading(true);
     
-    // Tentar login via Supabase OAuth direto
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -72,16 +70,7 @@ export default function AuthModal({ open, onClose, onSuccess }: AuthModalProps) 
     
     if (error) {
       console.error("Google OAuth error:", error);
-      
-      // Fallback para Lovable se Supabase OAuth falhar
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      
-      if (result.error) {
-        toast.error("Login com Google não disponível. Use email e senha.");
-        console.error("Lovable OAuth error:", result.error);
-      }
+      toast.error("Erro ao entrar com Google. Verifique a configuração do OAuth no Supabase.");
     }
   };
 
