@@ -53,24 +53,54 @@ serve(async (req) => {
               },
               {
                 type: "text",
-                text: `As a world-class architect and visualization expert, conduct an exhaustive technical analysis of this architectural image. Provide exceptional detail and precision in your evaluation. Return ONLY a valid JSON object with these comprehensive fields:
+                text: `As a forensic architectural analyst with 25+ years of experience, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural image. NOTHING should escape your observation. Return ONLY a valid JSON object with these fields - each field must contain EXTREMELY detailed information:
 
 {
-  "IMAGE_TYPE": "precise classification (photorealistic 3D render, architectural photography, concept sketch, technical drawing, floor plan, elevation, section, axonometric)",
-  "ARCHITECTURAL_STYLE": "detailed style identification (Modernist, Brutalist, Art Deco, Neoclassical, Contemporary, Parametric, Minimalist, Industrial, Scandinavian, etc.)",
-  "ENVIRONMENT": "spatial context (interior residential, interior commercial, exterior urban, exterior rural, mixed-use, public space, landscape)",
-  "MATERIALS": "comprehensive material list with technical specifications (concrete, steel, glass, wood species, stone types, composite materials, finishes, textures)",
-  "OBJECTS": "detailed inventory (furniture pieces, lighting fixtures, decorative elements, vegetation species, architectural features, structural elements)",
-  "LIGHTING": "complete lighting analysis (natural daylight, artificial lighting, time of day, light direction, intensity, color temperature, shadows, reflections)",
-  "COLORS": "sophisticated color palette (primary, secondary, accent colors with specific names and psychological impact)",
-  "TEXTURES": "detailed texture identification (smooth, rough, polished, matte, grain patterns, surface treatments, material properties)",
-  "SPATIAL_COMPOSITION": "advanced composition analysis (camera angle, lens type, perspective, depth of field, framing, scale, proportion, balance)",
-  "ARCHITECTURAL_DETAILS": "comprehensive detail catalog (structural systems, facade treatments, window types, roofing materials, joinery, connections, architectural elements)",
-  "ATMOSPHERE": "detailed atmospheric description (mood, emotional impact, sensory experience, environmental conditions, cultural context)",
-  "FULL_DESCRIPTION": "An extensive, richly detailed paragraph (8-12 lines) that synthesizes all analysis into a master architectural render prompt with exceptional technical vocabulary and artistic vision"
+  "IMAGE_TYPE": "precise classification (photorealistic 3D render, architectural photography, concept sketch, technical drawing, floor plan, elevation, section, axonometric, perspective)",
+  "ARCHITECTURAL_STYLE": "detailed style with era, movement, influences, and regional variations",
+  "ENVIRONMENT": "exact spatial context with all visible surroundings",
+  "BUILDING_TYPE": "specific building classification (single-family home, apartment, office, retail, institutional, industrial, mixed-use, etc.)",
+  "STRUCTURAL_SYSTEM": "visible structural elements - foundation type, framing system, load-bearing walls, columns, beams, trusses, cantilevers, setbacks",
+  "FACADE": "comprehensive facade description - cladding materials, panel systems, fenestration patterns, reveals, shadow lines, surface treatments",
+  "OPENINGS": "ALL doors and windows - exact types (casement, sliding, fixed, pivot, bi-fold, French), frame materials, glazing types, mullion patterns, head/jamb/sill details, hardware",
+  "ROOFING": "complete roof description - form (flat, pitched, gable, hip, mansard, shed, butterfly), covering materials, eaves, soffits, fascia, gutters, downspouts, parapets, roof penetrations",
+  "VERTICAL_CIRCULATION": "stairs, elevators, ramps, escalators - type, materials, railings, balustrades",
+  "HORIZONTAL_CIRCULATION": "corridors, hallways, foyers, vestibules - dimensions, finishes, ceiling treatments",
+  "ROOMS_SPACES": "identify each distinct room/space by function, approximate dimensions, ceiling height, floor treatment",
+  "MATERIALS": "granular material list with exact specifications (e.g., 'exposed concrete with 1.2m formwork tie pattern', 'white Carrara marble with grey veining', 'clear tempered glass with low-iron content')",
+  "FINISHES": "surface treatments - paint colors (with hex codes if identifiable), stains, clear coats, patinas, weathering, wear patterns",
+  "OBJECTS": "complete inventory of EVERY visible object - furniture (identify designer/brand if possible), lighting fixtures (exact type: pendant/chandelier/recessed/track/wall/ceiling/floor), decorative elements, accessories, equipment",
+  "VEGETATION": "ALL plants visible - species identification if possible, maturity, density, placement, container types, health condition",
+  "VEHICLES": "any vehicles visible - type, make/model if identifiable, color, condition, positioning",
+  "PEOPLE": "human presence - number, activities, clothing styles, approximate ages, groupings",
+  "LIGHTING": "detailed lighting analysis - all natural and artificial sources, time of day estimation, shadow directions, light color temperature, intensity, contrast ratios, reflection patterns, glare sources",
+  "COLORS": "exhaustive color analysis - primary palette, secondary colors, accent colors, neutrals, color harmony scheme, saturation levels, with approximate color names",
+  "TEXTURES": "surface texture catalog - every visible material's surface quality, glossiness, roughness, pattern, irregularities, imperfections",
+  "PATTERNS": "geometric patterns, repetitive elements, grids, modules, tessellations, ornamental details",
+  "SPATIAL_COMPOSITION": "comprehensive composition analysis - exact camera position estimation, lens focal length approximation, perspective type, vanishing points, foreground/midground/background elements, depth layers",
+  "ARCHITECTURAL_DETAILS": "catalog of ALL architectural details - baseboards, crown moldings, reveals, expansion joints, control joints, weep holes, vents, louvers, screens, louvers, shutters, awnings, canopies, balconies, terraces",
+  "MECHANICAL_ELECTRICAL": "visible MEP elements - HVAC units, ductwork, diffusers, switches, outlets, panels, meters, conduits, lighting controls",
+  "LANDSCAPE": "site features - paving materials (exact patterns, joint widths), drainage, irrigation, edging, planters, grade changes",
+  "ATMOSPHERE": "detailed mood and emotional impact - ambiance, character, experience, cultural context, seasonal indicators, weather conditions",
+  "WEATHER_CONDITIONS": "current weather state - sky conditions, cloud types, precipitation, wind effects, atmospheric clarity",
+  "PHOTOGRAPHIC_QUALITIES": "image characteristics - focus, sharpness, depth of field, motion blur, lens distortion, chromatic aberration, film grain, dynamic range",
+  "SIGNS_TEXT": "any visible signage, text, numbers, symbols, logos - content, typography, placement",
+  "DAMAGES_IMPERFECTIONS": "any flaws, defects, deterioration, damage, repairs, stains, cracks, chips, fading, discoloration",
+  "TEMPORAL_INDICATORS": "clues about time period - architectural era, style period, construction date indicators, vintage vs. contemporary elements",
+  "SCALE_REFERENCES": "any scale indicators - human figures, vehicles, furniture, standard objects that indicate dimensions",
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed, flowing narrative description (15-20 lines) that captures EVERY nuance of the architectural scene. Describe the building/space as if to a blind architect who needs to visualize it perfectly. Include: overall impression, massing, proportions, material relationships, spatial qualities, light behavior, atmospheric conditions, and ALL distinguishing characteristics. This should be the ultimate architectural visualization prompt."
 }
 
-Provide the most thorough and detailed analysis possible. Return ONLY the JSON. No explanations, no markdown formatting, no additional text.`,
+CRITICAL INSTRUCTIONS:
+- Examine the image as if your career depends on catching every detail
+- Describe materials with enough specificity that a contractor could identify them
+- Note the condition and wear of every surface
+- Identify patterns at macro and micro scales
+- Capture the interplay between materials, light, and shadow
+- Describe spatial sequences and how spaces connect
+- Note any asymmetries, irregularities, or unique features
+- Identify the designer's/architect's intent through design decisions
+- Return ONLY the JSON object. No markdown, no explanations, no extra text.`,
               },
             ],
           },
