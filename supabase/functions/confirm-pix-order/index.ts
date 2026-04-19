@@ -59,6 +59,7 @@ serve(async (req) => {
 
     if (order.type === "subscription") {
       const plan = order.plan as "starter" | "pro";
+      // Atualizar profiles (backward compatibility)
       await serviceClient
         .from("profiles")
         .update({
@@ -68,9 +69,24 @@ serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", order.user_id);
+
+      // Atualizar user_credits (novo sistema)
+      await serviceClient
+        .from("user_credits")
+        .upsert({
+          user_id: order.user_id,
+          credits: PLAN_CREDITS[plan],
+          subscription_plan: plan,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id',
+        });
     }
 
     if (order.type === "credits") {
+      const creditsAmount = order.credits_amount || 0;
+
+      // Atualizar profiles (backward compatibility)
       const { data: profile } = await serviceClient
         .from("profiles")
         .select("avulso_credits")
@@ -82,7 +98,24 @@ serve(async (req) => {
       await serviceClient
         .from("profiles")
         .update({
-          avulso_credits: currentCredits + (order.credits_amount || 0),
+          avulso_credits: currentCredits + creditsAmount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", order.user_id);
+
+      // Atualizar user_credits (novo sistema)
+      const { data: userCredit } = await serviceClient
+        .from("user_credits")
+        .select("bonus_credits")
+        .eq("user_id", order.user_id)
+        .single();
+
+      const currentBonus = userCredit?.bonus_credits ?? 0;
+
+      await serviceClient
+        .from("user_credits")
+        .update({
+          bonus_credits: currentBonus + creditsAmount,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", order.user_id);
