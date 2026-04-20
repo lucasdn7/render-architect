@@ -29,15 +29,16 @@ serve(async (req) => {
     req.headers.forEach((value, key) => { allHeaders[key.toLowerCase()] = value; });
     console.log("[create-checkout-session] Headers recebidos:", JSON.stringify(allHeaders));
 
-    // Tentar obter token do header customizado (evita interceptação do gateway)
-    let userToken = req.headers.get("x-custom-auth") ||
-                    req.headers.get("X-Custom-Auth") ||
-                    allHeaders["x-custom-auth"];
-    
-    console.log("[create-checkout-session] X-Custom-Auth encontrado:", userToken ? "SIM (len=" + userToken.length + ")" : "NÃO");
+    // Ler o body da requisição
+    const body = await req.json();
+    console.log("[create-checkout-session] Body recebido:", JSON.stringify({ ...body, accessToken: body.accessToken ? "PRESENTE" : "AUSENTE" }));
+
+    // Obter token do body (gateway não intercepta body)
+    const userToken = body.accessToken;
+    console.log("[create-checkout-session] Token do body:", userToken ? "SIM (len=" + userToken.length + ")" : "NÃO");
 
     if (!userToken) {
-      throw new Error("Token de autenticação ausente. Headers recebidos: " + Object.keys(allHeaders).join(", "));
+      throw new Error("Token de autenticação ausente no body");
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {

@@ -20,17 +20,17 @@ export async function createStripeCheckoutSession(payload: CheckoutPayload): Pro
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-  // Enviar requisição com token em header customizado (evita interceptação do gateway)
+  // Enviar requisição com token no body (gateway não intercepta body)
   const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Custom-Auth": accessToken,
     },
     body: JSON.stringify({
       ...payload,
       successUrl,
       cancelUrl,
+      accessToken, // Token no body para evitar interceptação do gateway
     }),
   });
 
