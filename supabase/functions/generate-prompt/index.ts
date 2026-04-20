@@ -1,3 +1,7 @@
+// @ts-nocheck
+// This file runs in Deno environment on Supabase Edge Functions
+// TypeScript errors are expected in local IDE due to Deno-specific APIs
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -35,6 +39,7 @@ Core Principles:
 
 3. CONFLICT RESOLUTION:
    • Camera: Any lens/angle mentions in lower blocks must be reconciled with Camera block's specific lens choice
+   • Camera Position (CRITICAL): The camera position, angle, height, and perspective extracted from the IMAGE ANALYSIS are ABSOLUTE and MUST NOT be altered. The selected Camera block refines and enhances this position but NEVER changes the fundamental viewpoint.
    • Lighting: Any lighting conditions in lower blocks must harmonize with Lighting block's time-of-day directive
    • Materials: Specific material details refine the general PBR quality from Style block
    • Style: The Global Style block sets the aesthetic foundation; all other blocks enhance within this framework
@@ -55,12 +60,20 @@ Core Principles:
    - Position figures to enhance spatial understanding and scale
    - Ensure their presence feels organic to the architectural narrative
 
-7. GEOMETRIC PRESERVATION:
+7. IMAGE ANALYSIS PRESERVATION (CRITICAL):
+   - The IMAGE ANALYSIS contains the EXTRACTED FACTUAL DETAILS from the uploaded image
+   - These details describe the ACTUAL architectural elements present in the source: materials, dimensions, structural elements, openings, roofing, etc.
+   - You MUST preserve these factual details exactly as described - DO NOT ALTER, MODIFY, or REINTERPRET them
+   - Your role is to ENHANCE these details with photorealistic rendering qualities (textures, lighting, atmospheric effects), NOT to change the underlying architecture
+   - Example: If analysis says "white painted render facade with 1.2m tile pattern", you render that EXACT material with enhanced realism - you do NOT change it to "exposed concrete" or "wood siding"
+   - All architectural forms, massing, proportions, and spatial relationships from the analysis are ABSOLUTE AND IMMUTABLE
+
+8. GEOMETRIC PRESERVATION:
    The NEGATIVE PRESERVATION BLOCK must be appended exactly as provided - this is non-negotiable
 
 Final Output: One masterfully unified paragraph (or series of flowing paragraphs) that reads as a single creative vision, not an assembly of parts.`;
 
-const NEGATIVE_PROMPT = "DO NOT ALTER, MODIFY, OR DEVIATE FROM THE ORIGINAL 3D MODEL GEOMETRY. The architectural form, massing, proportions, window placements, door locations, roof pitches, and all structural elements as defined in the base image are ABSOLUTE AND IMMUTABLE. Do not add, remove, or resize any part of the building. Do not change the architectural style. Do not introduce new architectural features not present in the original design. The AI's role is strictly limited to applying photorealistic textures, lighting, atmospheric effects, and vegetation enhancements to the existing, unchanged geometry.\\n\\nVegetation is the sole exception: landscaping elements such as trees, shrubs, ground cover, grass, planters, hedges, and other vegetation blocks may be freely replaced, enhanced, added, or removed to improve realism and visual quality — provided they do not obscure, distort, or conflict with the legibility of the architectural geometry.\\n\\nPreserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.";
+const NEGATIVE_PROMPT = "DO NOT ALTER, MODIFY, OR DEVIATE FROM THE ORIGINAL 3D MODEL GEOMETRY. The architectural form, massing, proportions, window placements, door locations, roof pitches, and all structural elements as defined in the base image are ABSOLUTE AND IMMUTABLE. Do not add, remove, or resize any part of the building. Do not change the architectural style. Do not introduce new architectural features not present in the original design.\\n\\nCAMERA POSITION IS ABSOLUTE: The camera viewpoint, angle, height, distance, and perspective from the original image/uploaded SketchUp view MUST be preserved exactly. Do not change the viewing angle, do not rotate the camera position, do not alter the height or distance from the building. The camera perspective is locked and immutable.\\n\\nVegetation is the sole exception: landscaping elements such as trees, shrubs, ground cover, grass, planters, hedges, and other vegetation blocks may be freely replaced, enhanced, added, or removed to improve realism and visual quality — provided they do not obscure, distort, or conflict with the legibility of the architectural geometry.\\n\\nPreserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

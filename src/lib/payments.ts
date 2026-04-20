@@ -20,11 +20,12 @@ export async function createStripeCheckoutSession(payload: CheckoutPayload): Pro
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
+  // Enviar requisição com token de autenticação no header Authorization padrão
   const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-User-Token": accessToken,
+      "Authorization": `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       ...payload,
