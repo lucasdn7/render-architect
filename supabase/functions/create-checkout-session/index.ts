@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-custom-auth",
 };
 
 serve(async (req) => {
@@ -26,16 +26,18 @@ serve(async (req) => {
 
     // Logar todos os headers recebidos para debug
     const allHeaders: Record<string, string> = {};
-    req.headers.forEach((value, key) => { allHeaders[key] = value; });
+    req.headers.forEach((value, key) => { allHeaders[key.toLowerCase()] = value; });
     console.log("[create-checkout-session] Headers recebidos:", JSON.stringify(allHeaders));
 
-    // Obter token do header Authorization (padrão Supabase)
-    const authHeader = req.headers.get("authorization");
-    const userToken = authHeader?.replace("Bearer ", "");
-    console.log("[create-checkout-session] Authorization header presente:", userToken ? "SIM (len=" + userToken.length + ")" : "NÃO");
+    // Tentar obter token do header customizado (evita interceptação do gateway)
+    let userToken = req.headers.get("x-custom-auth") ||
+                    req.headers.get("X-Custom-Auth") ||
+                    allHeaders["x-custom-auth"];
+    
+    console.log("[create-checkout-session] X-Custom-Auth encontrado:", userToken ? "SIM (len=" + userToken.length + ")" : "NÃO");
 
     if (!userToken) {
-      throw new Error("Token de autenticação ausente. Faça login novamente.");
+      throw new Error("Token de autenticação ausente. Headers recebidos: " + Object.keys(allHeaders).join(", "));
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
