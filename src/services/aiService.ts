@@ -1,19 +1,79 @@
 import { ImageAnalysis } from "@/types/promptRender";
 import { RENDER_PROMPTS, HUMANIZATION_PROMPT } from "@/config/promptsConfig";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+} from "@supabase/supabase-js";
 import { PlanTier, validateSelectedPromptKeysByPlan } from "@/config/planPermissions";
+
+async function getFunctionsErrorMessage(error: unknown, fallbackMessage: string): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.error && typeof body.error === "string") {
+        return body.error;
+      }
+      if (body?.message && typeof body.message === "string") {
+        return body.message;
+      }
+    } catch {
+      // No-op: fallback below
+    }
+
+    return "A função retornou um erro HTTP. Verifique se você está autenticado e se os secrets da Edge Function estão configurados.";
+  }
+
+  if (error instanceof FunctionsRelayError) {
+    return "Falha no relay da Edge Function. Tente novamente em alguns instantes.";
+  }
+
+  if (error instanceof FunctionsFetchError) {
+    return "Falha de rede ao chamar a Edge Function. Verifique sua conexão e tente novamente.";
+  }
+
+  return fallbackMessage;
+}
+
+
+async function invokeFunctionWithSession<TBody extends Record<string, unknown>, TResponse>(
+  functionName: string,
+  body: TBody
+): Promise<{ data: TResponse | null; error: unknown | null }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    return {
+      data: null,
+      error: new Error("Sessão expirada ou inexistente. Faça login novamente."),
+    };
+  }
+
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  return { data: data as TResponse | null, error };
+}
 
 // ─────────────────────────────────────────────
 // STEP 02 — Analisa a imagem via Edge Function
 // ─────────────────────────────────────────────
 export async function analyzeImage(base64Image: string): Promise<ImageAnalysis> {
-  const { data, error } = await supabase.functions.invoke("analyze-image", {
-    body: { base64Image },
-  });
+  const { data, error } = await invokeFunctionWithSession<{ base64Image: string }, ImageAnalysis>(
+    "analyze-image",
+    { base64Image }
+  );
 
   if (error) {
     console.error("analyze-image error:", error);
-    throw new Error("Erro ao analisar imagem. Tente novamente.");
+    throw new Error(await getFunctionsErrorMessage(error, "Erro ao analisar imagem. Tente novamente."));
   }
 
   if (data?.error) {
@@ -72,13 +132,18 @@ export async function generateFinalPrompt(
     }
   }
 
-  const { data, error } = await supabase.functions.invoke("generate-prompt", {
-    body: { imageDescription, selectedPrompts, humanizationText },
+  const { data, error } = await invokeFunctionWithSession<
+    { imageDescription: string; selectedPrompts: string[]; humanizationText: string },
+    { prompt?: string; error?: string }
+  >("generate-prompt", {
+    imageDescription,
+    selectedPrompts,
+    humanizationText,
   });
 
   if (error) {
     console.error("generate-prompt error:", error);
-    throw new Error("Erro ao gerar prompt final. Tente novamente.");
+    throw new Error(await getFunctionsErrorMessage(error, "Erro ao gerar prompt final. Tente novamente."));
   }
 
   if (data?.error) {
