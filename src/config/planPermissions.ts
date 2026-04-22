@@ -130,7 +130,7 @@ export function validateSelectedPromptKeysByPlan(selectedKeys: string[], plan: P
   blockedKeys: string[];
 } {
   const allowed = getAllowedPromptKeysForPlan(plan);
-  const blockedKeys = selectedKeys.filter((key) => key !== "suffix" && !allowed.has(key));
+  const blockedKeys = selectedKeys.filter((key) => !allowed.has(key));
   return {
     valid: blockedKeys.length === 0,
     blockedKeys,

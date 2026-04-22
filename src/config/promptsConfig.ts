@@ -30,6 +30,9 @@ export const MERGE_AGENT = `1. Prioridade Hierárquica: Sempre priorize as instr
 5. Flexibilidade: Permita a seleção de até dois blocos de "Entorno" e mescle-os de forma harmoniosa, priorizando a clareza e a coerência visual.
 6. Saída Final: O resultado deve ser um único prompt de texto, pronto para ser inserido em um gerador de imagem de IA, otimizado para fotorrealismo e precisão arquitetônica.`;
  
+
+export const SUFFIX = `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must be indistinguishable from a photograph taken on location by a professional architectural photographer. --ar 16:9 --q 2 --v 6.1 --style raw`;
+
 export const RENDER_PROMPTS: Record<string, string> = {
  
   // ─────────────────────────────────────────────
@@ -355,7 +358,7 @@ Final expected result: an image indistinguishable from a real photograph, mainta
   // SUFIXO TÉCNICO UNIVERSAL
   // ─────────────────────────────────────────────
  
-  suffix: `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must be indistinguishable from a photograph taken on location by a professional architectural photographer. --ar 16:9 --q 2 --v 6.1 --style raw`
+  suffix: SUFFIX
  
 }
  
