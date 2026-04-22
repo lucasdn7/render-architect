@@ -37,39 +37,13 @@ async function getFunctionsErrorMessage(error: unknown, fallbackMessage: string)
 }
 
 
-async function invokeFunctionWithSession<TBody extends Record<string, unknown>, TResponse>(
-  functionName: string,
-  body: TBody
-): Promise<{ data: TResponse | null; error: unknown | null }> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    return {
-      data: null,
-      error: new Error("Sessão expirada ou inexistente. Faça login novamente."),
-    };
-  }
-
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body,
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
-
-  return { data: data as TResponse | null, error };
-}
-
 // ─────────────────────────────────────────────
 // STEP 02 — Analisa a imagem via Edge Function
 // ─────────────────────────────────────────────
 export async function analyzeImage(base64Image: string): Promise<ImageAnalysis> {
-  const { data, error } = await invokeFunctionWithSession<{ base64Image: string }, ImageAnalysis>(
-    "analyze-image",
-    { base64Image }
-  );
+  const { data, error } = await supabase.functions.invoke("analyze-image", {
+    body: { base64Image },
+  });
 
   if (error) {
     console.error("analyze-image error:", error);
@@ -132,13 +106,8 @@ export async function generateFinalPrompt(
     }
   }
 
-  const { data, error } = await invokeFunctionWithSession<
-    { imageDescription: string; selectedPrompts: string[]; humanizationText: string },
-    { prompt?: string; error?: string }
-  >("generate-prompt", {
-    imageDescription,
-    selectedPrompts,
-    humanizationText,
+  const { data, error } = await supabase.functions.invoke("generate-prompt", {
+    body: { imageDescription, selectedPrompts, humanizationText },
   });
 
   if (error) {
