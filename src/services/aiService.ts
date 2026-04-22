@@ -93,8 +93,6 @@ export async function generateFinalPrompt(
     .map((key) => RENDER_PROMPTS[key])
     .filter(Boolean);
 
-  // Always add suffix
-  selectedPrompts.push(RENDER_PROMPTS.suffix);
 
   // Build humanization text
   let humanizationText = "";
