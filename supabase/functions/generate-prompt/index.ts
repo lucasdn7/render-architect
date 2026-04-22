@@ -1,31 +1,24 @@
 // @ts-nocheck
 // Supabase Edge Function — generate-prompt
-// promptsConfig embutido diretamente (sem imports locais)
+// O frontend envia as chaves selecionadas (ex: ["render_externo", "diurno", "fotorrealista", "eye_level"])
+// Esta função resolve os textos, mescla com a descrição da imagem via IA e retorna o prompt final.
  
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
  
 // ─────────────────────────────────────────────
-// PROMPTS CONFIG (embutido)
+// SYSTEM / MERGE INSTRUCTIONS
 // ─────────────────────────────────────────────
  
 const SYSTEM_PERSONA = `Você é um "Render Master AI", um especialista em visualização arquitetônica com profundo conhecimento em renderização fotorrealista, 
 materiais PBR, iluminação avançada e composição fotográfica. Sua missão é interpretar e combinar os blocos de prompt fornecidos para gerar um prompt final coeso e 
 tecnicamente otimizado para motores de renderização de última geração.`;
  
-const NEGATIVE_PROMPT = `DO NOT ALTER, MODIFY, OR DEVIATE FROM THE ORIGINAL 3D MODEL GEOMETRY. The architectural form, massing, proportions, window placements, door locations, roof pitches, and all structural elements as defined in the base image are ABSOLUTE AND IMMUTABLE. Do not add, remove, or resize any part of the building. Do not change the architectural style. Do not introduce new architectural features not present in the original design. The AI's role is strictly limited to applying photorealistic textures, lighting, atmospheric effects, and vegetation enhancements to the existing, unchanged geometry.
- 
-DO NOT RENDER 2D drawing elements such as plans, sections, elevations, dimensions, furniture symbols, annotations, or any other drafting elements. Exclude all documentary or technical drawing representations. Preserve the 3D architectural geometry (walls, roofs, windows) rigidly.
- 
-Vegetation is the sole exception: landscaping elements such as trees, shrubs, ground cover, grass, planters, hedges, and other vegetation blocks may be freely replaced, enhanced, added, or removed to improve realism and visual quality — provided they do not obscure, distort, or conflict with the legibility of the architectural geometry.
- 
-Preserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.`;
- 
 const MASTER_MERGE_PROMPT = `As an expert AI prompt meshing system for architectural visualization, your task is to combine selected prompt blocks into a single, coherent, and highly effective rendering prompt. Follow this strict hierarchical order and conflict resolution strategy:
 1. TIPO DE RENDER (Mandatório - Selecione UM): Este bloco define a intenção geral da renderização, o estilo e a qualidade global. Ele atua como a diretriz principal para a IA.
 2. PERÍODO DO DIA/ILUMINAÇÃO (Mandatório - Selecione UM): Este bloco define as condições de iluminação global, propriedades das fontes de luz (posição do sol, temperatura de cor), condições do céu e efeitos atmosféricos. Ele deve complementar o Tipo de Render sem anular suas diretrizes principais.
 3. QUALIDADE / ESTILO DO RENDER (Mandatório - Selecione UM): Este bloco reforça as diretrizes de estilo e qualidade, aplicação geral de materiais PBR, técnicas de iluminação global e a instrução crítica sobre substituição de texturas. Atua como uma passagem final de qualidade.
 4. ELEMENTOS DO AMBIENTE (Opcional - Selecione ZERO ou MAIS): Este bloco introduz propriedades detalhadas de materiais (PBR, micro-imperfeições), efeitos de iluminação localizados (cáusticas, perfis IES) e características ambientais específicas (detalhes de vegetação, física da água). Esses detalhes devem ser integrados à cena, respeitando as configurações globais de iluminação e câmera estabelecidas pelos blocos anteriores. Priorize as definições de materiais PBR desses blocos sobre quaisquer menções genéricas de materiais.
-5. ENTORNO (Opcional - Selecione ZERO ou MAIS, até DOIS blocos de 'Entorno'): Este bloco define o contexto circundante da arquitetura, como edifícios vizinhos, vegetação, ruas e elementos urbanos. Ele deve ser integrado à cena, respeitando a iluminação global e as configurações da câmera.
+5. ENTORNO (Opcional - Selecione ZERO ou MAIS, até DOIS blocos de Entorno): Este bloco define o contexto circundante da arquitetura, como edifícios vizinhos, vegetação, ruas e elementos urbanos. Ele deve ser integrado à cena, respeitando a iluminação global e as configurações da câmera.
 6. CÂMERA PERSPECTIVA (Mandatório - Selecione UM): Este bloco estabelece o tipo fundamental de cena, parâmetros da câmera (lente, perspectiva, distância focal, profundidade de campo, balanço de branco, exposição) e instruções de preservação geométrica. Quaisquer instruções relacionadas à câmera de blocos subsequentes devem ser consideradas refinamentos secundários ou ignoradas se contradizerem diretamente a configuração primária da câmera.
 7. SUFIXO DE RENDERIZAÇÃO (Mandatório - Anexar SEMPRE ao final): Este sufixo contém instruções de renderização e pós-processamento de alta fidelidade, além de parâmetros específicos do Midjourney. Ele deve ser anexado ao final do prompt gerado, sem modificações.
 8. BLOCO DE PRESERVAÇÃO NEGATIVA (Mandatório - Anexar SEMPRE ao final): Este bloco é crucial para garantir que a geometria arquitetônica original do modelo 3D e a precisão do desenho 2D sejam preservadas, evitando distorções ou alterações indesejadas pela IA. Ele deve ser anexado ao final do prompt gerado, sem modificações.`;
@@ -36,11 +29,106 @@ const MERGE_AGENT = `1. Prioridade Hierárquica: Sempre priorize as instruções
    • Câmera: Se um bloco de estilo ou entorno sugerir uma lente ou ângulo que contradiga o bloco de Câmera selecionado, o bloco de Câmera prevalece. Ajuste o prompt para refletir a intenção do bloco de Câmera.
    • Iluminação: Se um bloco de entorno ou estilo sugerir uma condição de iluminação que contradiga o bloco de Iluminação selecionado, o bloco de Iluminação prevalece. Ajuste o prompt para refletir a intenção do bloco de Iluminação.
    • Materiais PBR: As instruções de materiais PBR em blocos de entorno ou elementos do ambiente devem ser consideradas refinamentos detalhados e integradas, desde que não contradigam a qualidade geral PBR definida no bloco de Estilo Global.
-4. Preservação Geométrica: O "BLOCO DE PRESERVAÇÃO NEGATIVA" é absoluto e deve ser anexado ao final do prompt gerado, sem modificações, para garantir a integridade do modelo 3D original.
-5. Flexibilidade: Permita a seleção de até dois blocos de "Entorno" e mescle-os de forma harmoniosa, priorizando a clareza e a coerência visual.
+4. Preservação Geométrica: O BLOCO DE PRESERVAÇÃO NEGATIVA é absoluto e deve ser anexado ao final do prompt gerado, sem modificações, para garantir a integridade do modelo 3D original.
+5. Flexibilidade: Permita a seleção de até dois blocos de Entorno e mescle-os de forma harmoniosa, priorizando a clareza e a coerência visual.
 6. Saída Final: O resultado deve ser um único prompt de texto, pronto para ser inserido em um gerador de imagem de IA, otimizado para fotorrealismo e precisão arquitetônica.`;
  
 const SUFFIX = `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must be indistinguishable from a photograph taken on location by a professional architectural photographer. --ar 16:9 --q 2 --v 6.1 --style raw`;
+ 
+const NEGATIVE_PROMPT = `DO NOT ALTER, MODIFY, OR DEVIATE FROM THE ORIGINAL 3D MODEL GEOMETRY. The architectural form, massing, proportions, window placements, door locations, roof pitches, and all structural elements as defined in the base image are ABSOLUTE AND IMMUTABLE. Do not add, remove, or resize any part of the building. Do not change the architectural style. Do not introduce new architectural features not present in the original design. The AI's role is strictly limited to applying photorealistic textures, lighting, atmospheric effects, and vegetation enhancements to the existing, unchanged geometry.
+ 
+DO NOT RENDER 2D drawing elements such as plans, sections, elevations, dimensions, furniture symbols, annotations, or any other drafting elements. Exclude all documentary or technical drawing representations. Preserve the 3D architectural geometry (walls, roofs, windows) rigidly.
+ 
+Vegetation is the sole exception: landscaping elements such as trees, shrubs, ground cover, grass, planters, hedges, and other vegetation blocks may be freely replaced, enhanced, added, or removed to improve realism and visual quality — provided they do not obscure, distort, or conflict with the legibility of the architectural geometry.
+ 
+Preserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.`;
+ 
+// ─────────────────────────────────────────────
+// RENDER PROMPTS — todos os blocos por chave
+// ─────────────────────────────────────────────
+ 
+const RENDER_PROMPTS: Record<string, string> = {
+ 
+  // TIPO DE RENDER
+  render_geral: `Transform this 3D print into an ultra-photorealistic image, as if captured by a professional architectural photographer using a high-end DSLR/full-frame camera.
+Mandatory rules (do not violate): maintain 100% of the original project without adding, removing or modifying any element. Do not alter materials, textures, colors, furniture, volumetry or layout. Do not replace cladding or reinterpret finishes. Do not add decorative objects, plants, people, extra lighting or artistic effects.
+Visual objective: 100% photographic appearance, completely eliminating any render or illustration aspect. Natural and realistic lighting coherent with the original environment. Soft and physically correct shadows. Textures exactly matching the model, only with camera realism (sharpness, microcontrast and depth). Perspective and framing identical to the original print.
+Technical quality: 4K resolution, high level of detail, slight realistic depth of field where applicable, neutral white balance and correct exposure.
+Final expected result: an image indistinguishable from a real photograph, maintaining absolute fidelity to the original project, without any creative interference. IMPORTANT: Do not alter any texture or format of the original base image.`,
+ 
+  render_externo: `Transform the SketchUp model into a hyper-photorealistic architectural rendering of a residential or commercial facade, emulating professional architectural photography. STRICTLY preserve 100% of the original volumetry, proportions, and design, ensuring no alterations to architectural forms, openings, or compositional elements. Adjust exposure, white balance, and contrast to mimic a full-frame DSLR camera with a 24mm tilt-shift lens, ensuring perfectly corrected verticals.`,
+ 
+  render_interno: `Transform the SketchUp model into a hyper-photorealistic interior architectural rendering, emulating professional interior design photography. STRICTLY preserve 100% of the spatial layout, ceiling heights, openings, furniture placement, and all architectural proportions without any modification. Adjust exposure, white balance, and depth of field to simulate a DSLR camera with a 24mm wide-angle lens at eye level (1.2m height), ensuring natural perspective.`,
+ 
+  render_aereo: `Transform the SketchUp model into a hyper-photorealistic aerial rendering of the full site, emulating professional cinematic drone photography. STRICTLY preserve 100% of the site layout, roof geometry, landscaping footprint, and all architectural volumes, ensuring no alterations. Adjust exposure, white balance, and color grading to mimic a DJI Mavic 3 Pro camera at 80 meters altitude, 45-degree oblique angle, with precise perspective foreshortening and corrected lens distortion.`,
+ 
+  render_detalhe: `Transform the SketchUp model into a hyper-photorealistic architectural detail rendering, emulating professional macro architectural photography. STRICTLY preserve 100% of the original geometry of the detail being shown (e.g., material junction, window reveal, structural connection, facade joint, canopy edge), ensuring no modifications to form or proportion. Adjust exposure and depth of field to mimic a DSLR camera with an 85mm macro lens at F2.0, with a razor-sharp focus plane precisely on the primary detail.`,
+ 
+  render_corte: `Transform the SketchUp model into a hyper-photorealistic architectural section rendering, emulating a professional cut-through visualization. STRICTLY preserve 100% of the section geometry, floor-to-floor heights, slab thicknesses, wall depths, stair configurations, and spatial relationships between internal environments as drawn. The cut plane MUST remain exactly as defined in the original, with no reinterpretation or closing of any opening created by the section cut. Adjust camera to simulate a DSLR positioned perfectly perpendicular to the cut plane, with a true orthographic or near-orthographic perspective, ensuring the full section height is in frame and free of perspective distortion.`,
+ 
+  planta_humanizada: `Transform the SketchUp or CAD floor plan model into a hyper-photorealistic humanized plan rendering, emulating a professional top-down architectural visualization. STRICTLY preserve 100% of the original floor plan geometry (wall positions, room dimensions, door and window openings, circulation paths, spatial layout), ensuring no modifications whatsoever. Adjust rendering to simulate a perfectly vertical overhead camera, with zero perspective distortion (true orthographic projection), and even, diffuse global illumination from above, mimicking a studio lighting setup.`,
+ 
+  // PERÍODO DO DIA / ILUMINAÇÃO
+  diurno: `Apply crisp, bright midday natural daylight with the sun at a high elevation (approximately 65-75 degrees above the horizon). Color temperature precisely at 5600K (daylight white balance). Simulate advanced global illumination and ray tracing to produce sharp, well-defined directional shadows. The sky should be rendered as a vibrant, clear deep blue with subtle atmospheric scattering and one or two photorealistic, scattered cumulus clouds. Ensure full ambient bounce light from the ground plane and surrounding PBR surfaces, accurately filling shadow areas with soft, physically accurate secondary illumination and subtle color bleeding. All facade materials should receive direct solar radiation with precise PBR specular and diffuse response. Ensure no overexposure on brightly lit surfaces while retaining full detail and dynamic range in shadow zones.`,
+ 
+  entardecer: `Apply exquisite golden hour natural lighting with the sun positioned precisely at 8-10 degrees above the horizon, with a warm color temperature gradually dropping from 3500K to 2500K. All west and south-facing PBR surfaces should be bathed in rich, warm amber and orange light, exhibiting realistic subsurface scattering for foliage and translucent materials. East-facing surfaces should be in cool blue shadow, softly illuminated by the ambient sky fill. Cast dramatically long, raking shadows stretching across the ground plane, intensely emphasizing surface texture, relief, and micro-details. The sky should be rendered as a breathtaking gradient from deep burnt orange at the horizon, transitioning through vibrant magenta and rose pink, to a serene cobalt blue at the zenith, with subtle atmospheric haze and volumetric light rays piercing through vegetation or architectural openings. Specular highlights should be intensely pronounced on glazed surfaces, polished metals, and water features, showcasing accurate Fresnel reflections. Ensure no clipping of highlights or crushing of blacks.`,
+ 
+  noturno: `Apply immersive full nighttime lighting conditions with a deep indigo to near-black sky, featuring a subtle, realistic star texture and a soft, cool moonlight contribution as secondary fill. All exterior artificial light sources must be fully active and rendered with physically accurate IES light profiles: facade wash lighting, precise soffit downlights, dramatic landscape uplights on trees and plants, clearly defined pathway lights at grade, and luminous pool or water feature underwater lighting where present. Interior spaces should glow warmly through glazed surfaces, casting soft, inviting interior light onto adjacent exterior floor planes, with visible light spill and subtle color interaction. Render all light sources with natural bloom, lens flare, and realistic falloff, ensuring no clipping or overexposure on bulb sources, and maintaining detail within the light source itself. Deep shadow zones should exhibit only soft, ambient spill from nearby fixtures, with rich, dark tones but retaining subtle detail. Color temperature of artificial sources should be precisely between 2700K and 3000K (warm white). Minimize noise, and achieve a natural, balanced light distribution across the scene.`,
+ 
+  nublado: `Apply soft, diffused overcast sky lighting conditions with a dense, full cloud cover acting as an expansive natural diffusion panel. Color temperature precisely at 6500K (cool daylight). Simulate advanced global illumination to ensure zero hard shadows anywhere in the scene; instead, all PBR surfaces should receive soft, directionless, even illumination simultaneously, revealing subtle form and texture. The sky should be rendered as a uniform, silver-white to light gray overcast layer with nuanced tonal variation and volumetric depth between cloud masses. All material colors should be rendered at their most accurate and saturated, free from the interference of direct sunlight or harsh shadow contrast. A subtle cool blue-gray tone should permeate the ambient light, enhancing realism. The ground plane should receive soft, physically accurate bounce light from the expansive sky dome above. Aim for a perfectly balanced histogram, no blown highlights, and full, rich shadow detail retained.`,
+ 
+  chuva: `Apply a dramatic, active rainstorm atmosphere with a dark, brooding mid-gray stratocumulus overcast sky. Render hyper-realistic fine rain streaks as diagonal motion blur across the full frame, with density consistent with a moderate to heavy rainfall. All horizontal PBR surfaces must be covered in a thin, highly reflective water film, producing mirror-like specular reflections of the sky, facade, and all light sources. Photorealistic puddles should accumulate in low points and joints, featuring subtle concentric ripple patterns. Facade glazing should be realistically streaked with water rivulets running vertically, exhibiting accurate refraction and distortion. The ambient light should be flat, desaturated, and cool (precisely 6800K), slightly underexposed to powerfully reinforce the storm mood and sense of drama. All artificial light sources, where present, must be rendered with intensely intensified bloom and volumetric light shafts from moisture in the air, creating a captivating glow. Incorporate a noticeable atmospheric haze that subtly reduces the contrast of distant elements and enhances the sense of depth.`,
+ 
+  amanhecer: `Apply ethereal pre-sunrise dawn lighting with the sun not yet visible above the horizon. The sky should be rendered as a magnificent, layered gradient: deep charcoal at the zenith, gracefully transitioning through soft rose pink, delicate peach, and pale lavender, descending toward the horizon where a warm, backlit, and intensely luminous glow is present. The overall scene should be softly illuminated by a cool (precisely 4200K) indirect sky dome light, ensuring no direct solar shadows are cast. Introduce a subtle, low atmospheric ground haze at 0.5 to 1.0 meter height, partially obscuring the base of trees and the ground plane, enhancing depth and mystery. Photorealistic dew should be visibly clinging to vegetation, horizontal PBR surfaces, and glazing, exhibiting accurate refractive qualities. Long, horizontal cloud layers at the horizon should catch the earliest, most vibrant light in shimmering gold and amber tones. All facade surfaces should receive a cool, soft, directional fill light emanating from the intensely bright horizon zone.`,
+ 
+  // ELEMENTOS DO AMBIENTE
+  piscina: `The masonry pool should feature physically based rendering (PBR) tile or mosaic cladding with subtle grout lines, micro-imperfections, and accurate material reflectivity. The water must be crystal clear, exhibiting physically accurate transparency, refraction, and subsurface scattering for realistic depth, with gentle, natural surface undulation and subtle surface tension effects. Simulate dynamic, precise caustics dancing on the pool floor and walls, varying realistically with sun angle and water movement. The external deck should be rendered with PBR natural wood or high-quality porcelain tile, showcasing realistic grain, texture, subtle wear, and accurate reflections. Include realistic PBR sun loungers with natural fabric textures, a sophisticated umbrella, and high-end external furniture, all casting soft, accurate shadows.`,
+ 
+  jardim: `All vegetation should be rendered with physically based rendering (PBR) foliage, showcasing natural, vibrant colors, physically correct leaf textures with subtle imperfections (e.g., veins, slight wilting, dew drops), and accurate natural scale. Simulate advanced subsurface scattering for leaves and petals, allowing light to pass through and create realistic translucency. Ensure natural lighting coherent with the environment, producing realistic, soft-edged shadows cast by vegetation, with nuanced depth and layering in the planting composition. Emphasize an extremely high level of botanical detail, photorealistic organic materials, and dynamic interaction with light and wind (subtle movement).`,
+ 
+  area_gourmet: `Integrate ambient string lighting with realistic light falloff and subtle bloom for a warm, inviting atmosphere. All materials should be physically based rendering (PBR): natural wood for the pergola and furniture with authentic grain and subtle weathering, natural stone or high-quality porcelain countertops with accurate reflectivity and micro-imperfections, and brushed stainless steel appliances with anisotropic reflections. Ensure warm and balanced global illumination, coherent with a high-end gourmet environment, with soft, diffused shadows.`,
+ 
+  garagem: `The meticulously paved approach featuring physically based rendering (PBR) floor texture (e.g., concrete, pavers, asphalt) with subtle wear, tire marks, and accurate reflectivity. The architectural car portal detail should exhibit precise PBR material finishes (e.g., brushed metal, textured concrete, natural wood with grain). Include hyper-realistic vehicles where visible, rendered with accurate paint reflections, subtle dust, and realistic tire textures. Ensure natural global illumination coherent with the facade lighting, casting sharp, defined shadows from architectural elements and vehicles.`,
+ 
+  deck: `Render a professional, hyper-realistic natural hardwood deck, showcasing a rich, authentic timber grain texture, realistic weathering (e.g., subtle fading, water stains, micro-scratches), and natural tonal variation of real wood, all rendered with physically based rendering (PBR) properties. Outdoor lounge furniture should be seamlessly integrated into the deck composition, featuring PBR fabrics and materials with realistic wear. Emphasize a seamless indoor-outdoor transition visible in the framing, with accurate visual continuity. Ensure warm, natural global illumination that enhances wood tones, producing physically correct reflections on smooth surfaces and subtle subsurface scattering for any translucent elements.`,
+ 
+  iluminacao_cenica: `Render a dramatic, hyper-realistic nighttime scene with sophisticated architectural uplighting on the facade, utilizing precision spotlights with accurate IES profiles to dynamically highlight architectural volumes and textures. Integrate subtle, warm garden path lighting with soft glows and realistic light falloff. Implement elegant LED strip accents on architectural details, creating a refined light sculpture effect through deliberate, high-contrast interplay of light and shadow. All artificial light sources should emit a consistent warm white light (precisely 3000K), with physically accurate bloom, lens flare, and volumetric light shafts where appropriate.`,
+ 
+  nevoa: `Render a captivating scene with morning atmospheric fog, featuring ethereal mist layers gracefully enveloping lower vegetation and the ground plane. Introduce a soft, volumetric depth haze that naturally reduces background visibility, creating a dreamlike and serene quality. The lighting should be diffused, soft, and coherent with a foggy morning atmosphere, utilizing global illumination to ensure even light distribution. Employ a muted color palette dominated by cool blue-grey tones, with subtly desaturated hues. Ensure reduced contrast and atmospheric visibility depth, creating natural, discernible layers of depth and perspective.`,
+ 
+  espelho_dagua: `Render a professional, hyper-realistic still water mirror pool, functioning as a zen reflecting pool perfectly integrated into the architectural composition. This horizontal water feature should possess a crystal-still surface, exhibiting physically accurate mirror-like reflections of the sky, surrounding architecture, and any light sources. Simulate subtle, dynamic caustic light patterns on the pool floor, varying with light conditions. The water material should be physically based rendering (PBR), showcasing realistic transparency, refraction, and a visible, delicate surface tension.`,
+ 
+  // ENTORNO
+  entorno_residencial: `Render the surrounding residential context visible in the scene — neighboring houses, low-rise buildings, front yards, garden walls, fences, parked vehicles on street, sidewalks, utility poles, and residential street infrastructure — all at hyper-photorealistic fidelity consistent with the scale and character of the primary building. Surrounding structures rendered with accurate PBR material variation (e.g., weathered brick, textured stucco, aged wood, reflective glass), detailed window patterns, diverse roofline treatments, and natural weathering appropriate to an established residential neighborhood. All surrounding context subordinate in visual hierarchy to the primary architectural subject, rendered with slightly reduced sharpness, contrast, and depth-of-field falloff toward the background to reinforce depth and focus. Global Illumination (GI) and Physically Based Lighting (PBL) should accurately simulate light interaction with all surfaces.`,
+ 
+  entorno_comercial: `Render the surrounding commercial urban context visible in the scene — mid to high-rise office buildings, retail facades, signage, commercial streetscape, wide paving, vehicle traffic, bus lanes, pedestrian flow, street furniture, and urban infrastructure — all at hyper-photorealistic fidelity consistent with the density and character of a commercial district. Surrounding buildings rendered with accurate PBR material variation (e.g., curtain wall glazing, polished concrete, metal panels, illuminated signage), detailed cladding patterns, mechanical penthouses, and dynamic illuminated signage where appropriate. Urban background rendered with correct atmospheric haze and depth falloff. Global Illumination (GI) and Physically Based Lighting (PBL) should accurately simulate light interaction with all surfaces.`,
+ 
+  entorno_vegetacao: `Render the surrounding natural landscape context visible in the scene — mature trees, forest edge, dense vegetation layers, ground cover, wild grasses, shrubs, and organic terrain — all at hyper-photorealistic fidelity with species-appropriate silhouette, accurate PBR leaf translucency, intricate branching structure, and natural color variation. Vegetation rendered with accurate response to the active lighting conditions. No two trees identical — natural variation in height, crown shape, and seasonal color present throughout. Background vegetation fading into atmospheric depth with correct color desaturation and contrast reduction toward the horizon, incorporating volumetric fog and haze. Global Illumination (GI) and Physically Based Lighting (PBL) should accurately simulate light interaction with all surfaces.`,
+ 
+  entorno_predios: `Render the surrounding mid and high-rise building context visible in the scene — apartment towers, mixed-use residential blocks, commercial ground floors, rooftop water tanks, mechanical equipment penthouses, and dense urban street infrastructure — all at hyper-photorealistic fidelity consistent with the scale and vertical density of a consolidated urban district. Surrounding buildings rendered with accurate PBR facade material variation — each block with individual window pattern, balcony rhythm, and roofline treatment. Rooftop silhouettes of surrounding towers layered against sky in correct perspectival recession, distant buildings fading into atmospheric haze. Global Illumination (GI) and Physically Based Lighting (PBL) should accurately simulate light interaction with all surfaces.`,
+ 
+  entorno_casas: `Render the surrounding residential house context visible in the scene — single-family homes of varied architectural styles, low perimeter walls, front gardens, driveways, garage doors, mailboxes, sidewalks, and residential street details — all at hyper-photorealistic fidelity. Each neighboring house rendered with individual PBR material variation — no two houses identical in finish or architectural detailing. Front yards with mature planted gardens, lush lawn areas, ornamental hedges, and specimen trees. All surrounding houses rendered with natural weathering and the accumulated material patina of an inhabited neighborhood, while remaining visually subordinate to the primary architectural subject. Global Illumination (GI) and Physically Based Lighting (PBL) should accurately simulate light interaction with all surfaces.`,
+ 
+  // QUALIDADE / ESTILO DO RENDER
+  fotorrealista: `Final render quality: hyper-photorealistic, 8K ultra-high resolution, physically-based rendering (PBR) pipeline with bidirectional scattering distribution function (BSDF) for all materials, unbiased ray-traced global illumination (GI) and path-traced reflections/refractions, accurate Fresnel response on glass and polished surfaces, micro-surface roughness variation on matte materials for realistic light diffusion, advanced sub-surface scattering (SSS) on organic elements (e.g., vegetation, fabrics) for lifelike translucency. Camera simulation: emulating a Canon EOS R5 with a calibrated 35mm prime lens, F4 aperture, ISO 200, scientifically accurate exposure metering and dynamic range mapping. Post-processing: subtle film grain at 4%, slight vignette, chromatic aberration consistent with real-world lens optics, and bloom/glare effects for light sources. Output indistinguishable from on-site professional architectural photography, suitable for high-end print media.`,
+ 
+  classico: `Final render quality: impeccable academic architectural presentation standard, neutral color grading with a subtle warm bias, soft, diffused shadows with no extreme contrast or mood manipulation, all materials rendered with technical accuracy and full PBR color fidelity, balanced symmetric or harmonious composition, sky neutral and non-distracting (e.g., clear blue or evenly overcast), vegetation as calm, well-defined green masses with accurate PBR leaf textures. Global Illumination (GI) and Physically Based Lighting (PBL) should ensure even illumination and accurate material response. Output equivalent to AIA portfolio submission or RIBA award documentation quality, emphasizing clarity, precision, and timeless aesthetic.`,
+ 
+  atmosferico: `Final render quality: cinematic editorial grade, strong foreground-to-background depth layering, lifted blacks and crushed highlights for dramatic tonal range, rich color grading with intentional mood bias, deep shadow zones with selective ambient fill, composition with strong diagonal movement and deliberate negative space. Advanced volumetric lighting and atmospheric effects (e.g., fog, haze, dust motes) to enhance mood. Global Illumination (GI) and Physically Based Lighting (PBL) should be meticulously controlled to create specific emotional responses. Output equivalent to Dezeen, ArchDaily, or Wallpaper* architectural editorial photography standard, suitable for high-impact visual storytelling.`,
+ 
+  minimalista: `Final render quality: stripped-back minimalist presentation, architecture isolated against a neutral pale or white overcast sky, ground plane in uniform light tone with minimal PBR texture variation, all contextual distraction reduced to near zero, color palette limited to the architecture's own material range with no supplementary color. Composition centered with generous negative space, emphasizing clean lines and geometric forms. Vegetation if present reduced to a single restrained specimen with accurate PBR leaf textures and subtle subsurface scattering. Global Illumination (GI) and Physically Based Lighting (PBL) should provide even, soft illumination, highlighting architectural purity. Output referencing the stillness and precision of Tadao Ando documentation and John Pawson project photography.`,
+ 
+  // CÂMERA / PERSPECTIVA
+  eye_level: `Camera positioned at standard human eye level, precisely 1.6 meters above the ground plane, with a horizontal sight line perfectly parallel to the floor, replicating a natural standing-person perspective. Focal length calibrated to 35mm to 50mm (full-frame equivalent), accurately mirroring the natural human field of vision with zero vertical distortion (achieved via tilt-shift simulation or post-correction). The ground plane is visibly present in the lower third of the frame, the sky or ceiling occupies the upper third, and the architectural subject fills the entire vertical middle zone. Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
+ 
+  worm_eye: `Camera positioned extremely low, between 10 to 20 centimeters above the ground plane, with the lens tilted sharply upward toward the building. This creates strong converging vertical lines running from the base of the building upward, dramatically exaggerating building height and structural mass. The ground plane occupies the foreground as a dominant, richly textured surface in sharp PBR detail. The sky fills a large proportion of the upper frame, emphasizing scale. Overhangs, soffits, the underside of balconies, cantilevered volumes, and structural columns become primary compositional elements. Focal length calibrated to 20mm to 24mm (full-frame equivalent) wide-angle lens to maximize vertical drama and spatial distortion. Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
+ 
+  bird_eye: `Camera positioned directly overhead or at a high oblique angle between 60 and 90 degrees downward, simulating an aerial or elevated observation point. The full site footprint is visible — roof planes, terraces, landscaping, pool, driveway, surrounding context, and street geometry are all readable simultaneously. Roof materials, parapet details, rooftop equipment, and plan organization are legible with PBR accuracy from above. Focal length calibrated to 24mm to 35mm (full-frame equivalent). This angle effectively communicates site strategy, massing logic, roof design, and the relationship of the building to its urban or natural surroundings. Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
+ 
+  dutch_angle: `Camera rotated on its longitudinal axis between 15 and 35 degrees from horizontal, producing a deliberate diagonal tilt across the entire frame. The horizon line runs diagonally rather than horizontally, and all vertical architectural elements — columns, walls, window frames — are rendered at an angle relative to the frame edges. This creates visual tension, dynamic energy, and cinematic unease. Compositional diagonals reinforce the tilt, with strong leading lines running corner to corner. Focal length calibrated to 24mm to 35mm (full-frame equivalent). Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
+ 
+  wide_angle: `Camera fitted with an ultra-wide angle lens equivalent to 14mm to 20mm focal length (full-frame equivalent), capturing an expanded horizontal and vertical field of view in a single frame. Precisely controlled barrel distortion or deliberately corrected rectilinear perspective depending on desired artistic effect. Foreground elements appear larger and more prominent relative to background, exaggerating spatial depth and distance between near and far planes. Tight interior spaces appear expansive and generous. Exterior shots capture full building width plus substantial surrounding context within a single composition. Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
+};
  
 // ─────────────────────────────────────────────
 // CORS
@@ -62,29 +150,77 @@ serve(async (req) => {
   }
  
   try {
-    const { imageDescription, selectedPrompts, humanizationText } = await req.json();
+    // Payload esperado do frontend:
+    // {
+    //   imageDescription: string       → saída do analyze-image
+    //   selectedKeys: string[]         → ex: ["render_externo", "diurno", "fotorrealista", "eye_level"]
+    //   humanizationText?: string      → opcional, descrição de pessoas/animais
+    // }
+    const { imageDescription, selectedKeys, humanizationText } = await req.json();
  
-    const API_KEY = Deno.env.get("COMET_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "test-key-replace-with-real-key";
-    const API_MODEL = Deno.env.get("COMET_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
-    const API_BASE_URL = Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
- 
-    if (!API_KEY || API_KEY === "test-key-replace-with-real-key") {
+    // Valida campos obrigatórios
+    if (!imageDescription || typeof imageDescription !== "string") {
       return new Response(
-        JSON.stringify({
-          error:
-            "API_KEY não configurada. Adicione sua chave da API (CometAPI ou OpenAI) nas variáveis de ambiente do Supabase.",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "imageDescription é obrigatório e deve ser uma string." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
  
-    const selectedBlocksText = Array.isArray(selectedPrompts)
-      ? selectedPrompts.join("\n\n")
-      : String(selectedPrompts || "");
+    if (!Array.isArray(selectedKeys) || selectedKeys.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "selectedKeys deve ser um array com ao menos uma chave válida." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
  
+    // Resolve as chaves para os textos dos blocos
+    const resolvedBlocks: string[] = [];
+    const unknownKeys: string[] = [];
+ 
+    for (const key of selectedKeys) {
+      if (RENDER_PROMPTS[key]) {
+        resolvedBlocks.push(`[${key.toUpperCase()}]\n${RENDER_PROMPTS[key].trim()}`);
+      } else {
+        unknownKeys.push(key);
+      }
+    }
+ 
+    if (resolvedBlocks.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: `Nenhuma chave válida encontrada. Chaves inválidas: ${unknownKeys.join(", ")}`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+ 
+    // Config da API
+    const API_KEY = Deno.env.get("COMET_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
+    const API_MODEL = Deno.env.get("COMET_MODEL") || Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const API_BASE_URL = Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
+ 
+    if (!API_KEY) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "API_KEY não configurada. Adicione sua chave nas variáveis de ambiente do Supabase (COMET_API_KEY ou OPENAI_API_KEY).",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+ 
+    // Monta o prompt para a IA
+    const selectedBlocksText = resolvedBlocks.join("\n\n");
+ 
+    const userMessage =
+      `${MASTER_MERGE_PROMPT}\n\n` +
+      `${MERGE_AGENT}\n\n` +
+      `BASE_IMAGE_DESCRIPTION:\n${imageDescription}\n\n` +
+      `SELECTED_BLOCKS:\n${selectedBlocksText}\n\n` +
+      `OPTIONAL_PEOPLE_ANIMALS:\n${humanizationText || "(none)"}\n\n` +
+      `Gere agora o prompt mesclado.`;
+ 
+    // Chama a API de linguagem
     const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
       method: "POST",
       headers: {
@@ -95,10 +231,7 @@ serve(async (req) => {
         model: API_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PERSONA },
-          {
-            role: "user",
-            content: `${MASTER_MERGE_PROMPT}\n\n${MERGE_AGENT}\n\nBASE_IMAGE_DESCRIPTION:\n${imageDescription}\n\nSELECTED_BLOCKS:\n${selectedBlocksText}\n\nOPTIONAL_PEOPLE_ANIMALS:\n${humanizationText || "(none)"}\n\nGere agora o prompt mesclado.`,
-          },
+          { role: "user", content: userMessage },
         ],
       }),
     });
@@ -108,7 +241,7 @@ serve(async (req) => {
  
       if (status === 429) {
         return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido." }),
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -127,15 +260,24 @@ serve(async (req) => {
  
     const data = await response.json();
     const mergedPrompt = data.choices?.[0]?.message?.content?.trim() || "";
-    const prompt = [mergedPrompt, SUFFIX, NEGATIVE_PROMPT].filter(Boolean).join(" ");
  
-    return new Response(JSON.stringify({ prompt }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Prompt final = mesclagem da IA + SUFFIX + NEGATIVE_PROMPT
+    const finalPrompt = [mergedPrompt, SUFFIX, NEGATIVE_PROMPT].filter(Boolean).join("\n\n");
+ 
+    return new Response(
+      JSON.stringify({
+        prompt: finalPrompt,
+        usedKeys: selectedKeys.filter((k) => RENDER_PROMPTS[k]),
+        ...(unknownKeys.length > 0 && { ignoredKeys: unknownKeys }),
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (e) {
     console.error("generate-prompt error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro ao gerar prompt" }),
+      JSON.stringify({
+        error: e instanceof Error ? e.message : "Erro ao gerar prompt",
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
