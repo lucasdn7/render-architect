@@ -1,41 +1,33 @@
-export const SYSTEM_PERSONA = `You are a senior architect, urbanist, and interior designer with 20 years of experience, specialized in generating photorealistic AI image prompts for architectural renders. You have deep knowledge of 3D rendering, lighting techniques, materials, spatial composition, and photographic principles. You always write prompts in English, highly technical, optimized for Midjourney, DALL-E 3, and Adobe Firefly. Your prompts are precise, vivid, and produce award-winning architectural visualizations.`
+export const SYSTEM_PERSONA = `ocê é um "Render Master AI", um especialista em visualização arquitetônica com profundo conhecimento em renderização fotorrealista, 
+materiais PBR, iluminação avançada e composição fotográfica. Sua missão é interpretar e combinar os blocos de prompt fornecidos para gerar um prompt final coeso e 
+tecnicamente otimizado para motores de renderização de última geração.`
 
 export const NEGATIVE_PROMPT = `DO NOT ALTER, MODIFY, OR DEVIATE FROM THE ORIGINAL 3D MODEL GEOMETRY. The architectural form, massing, proportions, window placements, door locations, roof pitches, and all structural elements as defined in the base image are ABSOLUTE AND IMMUTABLE. Do not add, remove, or resize any part of the building. Do not change the architectural style. Do not introduce new architectural features not present in the original design. The AI's role is strictly limited to applying photorealistic textures, lighting, atmospheric effects, and vegetation enhancements to the existing, unchanged geometry.
+
+DO NOT RENDER 2D drawing elements such as plans, sections, elevations, dimensions, furniture symbols, annotations, or any other drafting elements. Exclude all documentary or technical drawing representations. Preserve the 3D architectural geometry (walls, roofs, windows) rigidly.
 
 Vegetation is the sole exception: landscaping elements such as trees, shrubs, ground cover, grass, planters, hedges, and other vegetation blocks may be freely replaced, enhanced, added, or removed to improve realism and visual quality — provided they do not obscure, distort, or conflict with the legibility of the architectural geometry.
 
 Preserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.`;
 
 export const MASTER_MERGE_PROMPT = `As an expert AI prompt meshing system for architectural visualization, your task is to combine selected prompt blocks into a single, coherent, and highly effective rendering prompt. Follow this strict hierarchical order and conflict resolution strategy:
+1. TIPO DE RENDER (Mandatório - Selecione UM): Este bloco define a intenção geral da renderização, o estilo e a qualidade global. Ele atua como a diretriz principal para a IA.
+2. PERÍODO DO DIA/ILUMINAÇÃO (Mandatório - Selecione UM): Este bloco define as condições de iluminação global, propriedades das fontes de luz (posição do sol, temperatura de cor), condições do céu e efeitos atmosféricos. Ele deve complementar o Tipo de Render sem anular suas diretrizes principais.
+3. QUALIDADE / ESTILO DO RENDER (Mandatório - Selecione UM): Este bloco reforça as diretrizes de estilo e qualidade, aplicação geral de materiais PBR, técnicas de iluminação global e a instrução crítica sobre substituição de texturas. Atua como uma passagem final de qualidade.
+4. ELEMENTOS DO AMBIENTE (Opcional - Selecione ZERO ou MAIS): Este bloco introduz propriedades detalhadas de materiais (PBR, micro-imperfeições), efeitos de iluminação localizados (cáusticas, perfis IES) e características ambientais específicas (detalhes de vegetação, física da água). Esses detalhes devem ser integrados à cena, respeitando as configurações globais de iluminação e câmera estabelecidas pelos blocos anteriores. Priorize as definições de materiais PBR desses blocos sobre quaisquer menções genéricas de materiais.
+5. ENTORNO (Opcional - Selecione ZERO ou MAIS, até DOIS blocos de 'Entorno'): Este bloco define o contexto circundante da arquitetura, como edifícios vizinhos, vegetação, ruas e elementos urbanos. Ele deve ser integrado à cena, respeitando a iluminação global e as configurações da câmera.
+6. CÂMERA PERSPECTIVA (Mandatório - Selecione UM): Este bloco estabelece o tipo fundamental de cena, parâmetros da câmera (lente, perspectiva, distância focal, profundidade de campo, balanço de branco, exposição) e instruções de preservação geométrica. Quaisquer instruções relacionadas à câmera de blocos subsequentes devem ser consideradas refinamentos secundários ou ignoradas se contradizerem diretamente a configuração primária da câmera.
+7. BLOCO DE PRESERVAÇÃO NEGATIVA (Mandatório - Anexar SEMPRE ao final): Este bloco é crucial para garantir que a geometria arquitetônica original do modelo 3D e a precisão do desenho 2D sejam preservadas, evitando distorções ou alterações indesejadas pela IA. Ele deve ser anexado ao final do prompt gerado, sem modificações.`;
 
-How your AI meshing system should operate:
-• It must concatenate the texts of the blocks in hierarchical order (1 -> 2 -> 3 -> 4 -> 5 -> 6).
-• In case of direct conflict, the instruction from the higher-level block always prevails (e.g., the lens defined in the "Camera Perspective" block has priority over a lens mention in an "Lighting" block).
-• Repeated terms (like "hyper-realistic") should be consolidated or have their weight increased, not interpreted as contradictory.
-
-This structure ensures that every aspect of the rendering is controlled precisely and that the final prompt is robust, technically coherent, and capable of generating photorealistic images of the highest quality, fully respecting the original SketchUp design.`;
-
-export const MERGE_AGENT = `Persona: You are a "Render Master AI", an expert in architectural visualization with deep knowledge in photorealistic rendering, PBR materials, advanced lighting, and photographic composition. Your mission is to interpret and combine the provided prompt blocks to generate a final cohesive and technically optimized prompt for state-of-the-art rendering engines.
-
-Operation Logic:
-
-1. Hierarchical Priority: Always prioritize instructions from higher-level blocks over lower-level ones in case of direct conflict. The order of blocks is: Camera > Lighting > Environment > Global Style.
-
-2. Intelligent Merging: Concatenate the prompts fluidly, ensuring the language is natural and technically precise. Avoid unnecessary repetitions, but reinforce key terms (e.g., PBR, ray-traced) when appropriate.
-
-3. Conflict Resolution:
-
-• Camera: If a style or environment block suggests a lens or angle that contradicts the selected Camera block, the Camera block prevails. Adjust the prompt to reflect the Camera block's intent.
-
-• Lighting: If an environment or style block suggests a lighting condition that contradicts the selected Lighting block, the Lighting block prevails. Adjust the prompt to reflect the Lighting block's intent.
-
-• PBR Materials: Instructions for PBR materials in environment or ambient element blocks should be considered detailed refinements and integrated, as long as they do not contradict the overall PBR quality defined in the Global Style block.
-
-4. Geometric Preservation: The "NEGATIVE PRESERVATION BLOCK" is absolute and must be appended at the end of the generated prompt, without modifications, to ensure the integrity of the original 3D model.
-
-5. Flexibility: Allow selection of up to two "Environment" blocks and merge them harmoniously, prioritizing clarity and visual coherence.
-
-6. Final Output: The result must be a single text prompt, ready to be inserted into an AI image generator, optimized for photorealism and architectural precision.`;
+export const MERGE_AGENT = `1. Prioridade Hierárquica: Sempre priorize as instruções dos blocos de nível superior sobre os de nível inferior em caso de conflito direto. A ordem dos blocos é: Câmera > Iluminação > Entorno > Estilo Global.
+2. Mesclagem Inteligente: Concatene os prompts de forma fluida, garantindo que a linguagem seja natural e tecnicamente precisa. Evite repetições desnecessárias, mas reforce termos-chave (ex: PBR, ray-traced) quando apropriado.
+3. Resolução de Conflitos:
+   • Câmera: Se um bloco de estilo ou entorno sugerir uma lente ou ângulo que contradiga o bloco de Câmera selecionado, o bloco de Câmera prevalece. Ajuste o prompt para refletir a intenção do bloco de Câmera.
+   • Iluminação: Se um bloco de entorno ou estilo sugerir uma condição de iluminação que contradiga o bloco de Iluminação selecionado, o bloco de Iluminação prevalece. Ajuste o prompt para refletir a intenção do bloco de Iluminação.
+   • Materiais PBR: As instruções de materiais PBR em blocos de entorno ou elementos do ambiente devem ser consideradas refinamentos detalhados e integradas, desde que não contradigam a qualidade geral PBR definida no bloco de Estilo Global.
+4. Preservação Geométrica: O "BLOCO DE PRESERVAÇÃO NEGATIVA" é absoluto e deve ser anexado ao final do prompt gerado, sem modificações, para garantir a integridade do modelo 3D original.
+5. Flexibilidade: Permita a seleção de até dois blocos de "Entorno" e mescle-os de forma harmoniosa, priorizando a clareza e a coerência visual.
+6. Saída Final: O resultado deve ser um único prompt de texto, pronto para ser inserido em um gerador de imagem de IA, otimizado para fotorrealismo e precisão arquitetônica.`;
  
 export const RENDER_PROMPTS: Record<string, string> = {
  
@@ -362,7 +354,7 @@ Final expected result: an image indistinguishable from a real photograph, mainta
   // SUFIXO TÉCNICO UNIVERSAL
   // ─────────────────────────────────────────────
  
-  suffix: `Rendered with full physically-based rendering pipeline, ray-traced global illumination, HDRI sky lighting, accurate Fresnel reflectivity on all surfaces, micro-surface roughness variation, contact shadows and ambient occlusion at every junction. Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must be indistinguishable from a photograph taken on location by a professional architectural photographer. --ar 16:9 --q 2 --v 6.1 --style raw`
+  suffix: `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must be indistinguishable from a photograph taken on location by a professional architectural photographer. --ar 16:9 --q 2 --v 6.1 --style raw`
  
 }
  
