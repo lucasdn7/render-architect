@@ -32,12 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const snapshot = await fetchCreditSnapshot(u.id);
-
     setCredits(Math.max(0, snapshot.baseCredits + snapshot.bonusCredits));
     setBonusCredits(Math.max(0, snapshot.bonusCredits));
     setCurrentPlan((snapshot.plan as PlanTier | null) ?? "free");
   }, []);
 
+  // Autenticação — igual ao original, sem nenhuma alteração
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
@@ -60,6 +60,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [refreshCredits]);
+
+  // Realtime: escuta UPDATE em profiles deste usuário.
+  // Atualiza créditos automaticamente quando PIX é confirmado
+  // ou quando consume_credit() desconta um crédito.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`profiles_credits_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => refreshCredits()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, refreshCredits]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
