@@ -71,6 +71,7 @@ export function formatHumanization(
 export interface GeneratedPromptResult {
   prompt: string;
   usedKeys: string[];
+  historyId: string | null;
 }
  
 // ─────────────────────────────────────────────
@@ -129,18 +130,22 @@ export async function generateFinalPrompt(
     : [];
 
   const wordCount = prompt.trim().split(/\s+/).filter(Boolean).length;
-  const { error: insertError } = await supabase.from("prompt_history").insert({
-    user_id: historyContext?.userId,
-    prompt,
-    image_preview: historyContext?.imagePreview || null,
-    render_config: historyContext?.renderConfig ?? {},
-    word_count: wordCount,
-  });
+  const { data: historyRow, error: insertError } = await supabase
+    .from("prompt_history")
+    .insert({
+      user_id: historyContext?.userId,
+      prompt,
+      image_preview: historyContext?.imagePreview || null,
+      render_config: historyContext?.renderConfig ?? {},
+      word_count: wordCount,
+    })
+    .select("id")
+    .maybeSingle();
 
   if (insertError) {
     console.error("prompt_history insert error:", insertError);
     throw new Error("Prompt gerado, mas houve erro ao salvar no histórico.");
   }
 
-  return { prompt, usedKeys };
+  return { prompt, usedKeys, historyId: (historyRow as { id?: string } | null)?.id ?? null };
 }

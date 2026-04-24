@@ -7,7 +7,19 @@ export interface PromptHistoryItem {
   render_config?: Record<string, unknown>;
   word_count?: number;
   created_at: string;
+  is_favorite?: boolean;
+  days_remaining?: number | null;
 }
+
+const PROMPT_TTL_DAYS = 30;
+
+const getDaysRemaining = (createdAt: string) => {
+  const created = new Date(createdAt).getTime();
+  const expires = created + PROMPT_TTL_DAYS * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  return Math.ceil((expires - now) / (24 * 60 * 60 * 1000));
+};
 
 export async function getHistory(): Promise<PromptHistoryItem[]> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -24,7 +36,30 @@ export async function getHistory(): Promise<PromptHistoryItem[]> {
     console.error("Error fetching history:", error);
     return [];
   }
-  return (data || []) as PromptHistoryItem[];
+  const rows = (data || []) as PromptHistoryItem[];
+
+  const { data: favoritesData } = await supabase
+    .from("favorites" as never)
+    .select("prompt_history_id")
+    .eq("user_id", user.id);
+
+  const favoriteIds = new Set(
+    ((favoritesData ?? []) as Array<{ prompt_history_id?: string | null }>)
+      .map((item) => item.prompt_history_id)
+      .filter((value): value is string => Boolean(value)),
+  );
+
+  return rows
+    .map((item) => {
+      const isFavorite = favoriteIds.has(item.id);
+      const daysRemaining = getDaysRemaining(item.created_at);
+      return {
+        ...item,
+        is_favorite: isFavorite,
+        days_remaining: isFavorite ? null : Math.max(0, daysRemaining),
+      };
+    })
+    .filter((item) => item.is_favorite || (item.days_remaining ?? 0) > 0);
 }
 
 export async function addToHistory(item: {

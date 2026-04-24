@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Clock, LogOut, User, CreditCard, History, Settings, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, LogOut, User, CreditCard, History, Settings, ChevronDown, MessageSquare, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   credits?: number;
@@ -13,6 +14,26 @@ export default function Header({ credits, onHistoryOpen, showStepper = true }: H
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const loadAdminAccess = async () => {
+      if (!user?.id) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles" as never)
+        .select("is_admin")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setIsAdmin(Boolean((data as { is_admin?: boolean } | null)?.is_admin));
+    };
+
+    void loadAdminAccess();
+  }, [user?.id]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -184,6 +205,48 @@ export default function Header({ credits, onHistoryOpen, showStepper = true }: H
                         <span className="font-mono text-sm">Histórico</span>
                       </button>
                       
+                      <button
+                        onClick={() => {
+                          navigate("/sugestoes");
+                          setDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors duration-200"
+                        style={{ color: "#888888" }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#1a1a1a";
+                          e.currentTarget.style.color = "#C9A84C";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "#888888";
+                        }}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span className="font-mono text-sm">Sugestões</span>
+                      </button>
+
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            navigate("/admin");
+                            setDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors duration-200"
+                          style={{ color: "#888888" }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#1a1a1a";
+                            e.currentTarget.style.color = "#C9A84C";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.color = "#888888";
+                          }}
+                        >
+                          <Shield className="w-4 h-4" />
+                          <span className="font-mono text-sm">Admin</span>
+                        </button>
+                      )}
+
                       <button
                         onClick={() => {
                           navigate("/configuracoes");
