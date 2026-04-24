@@ -67,6 +67,11 @@ export function formatHumanization(
   if (!pessoas && !animais) return "";
   return HUMANIZATION_PROMPT(pessoas, animais);
 }
+
+export interface GeneratedPromptResult {
+  prompt: string;
+  usedKeys: string[];
+}
  
 // ─────────────────────────────────────────────
 // STEP 05 — Gera o prompt final via Edge Function
@@ -81,8 +86,13 @@ export async function generateFinalPrompt(
     peopleDescription: string;
     addAnimals: boolean;
     animalDescription: string;
+  },
+  historyContext?: {
+    userId: string;
+    imagePreview?: string | null;
+    renderConfig?: Record<string, unknown>;
   }
-): Promise<string> {
+): Promise<GeneratedPromptResult> {
   const validation = validateSelectedPromptKeysByPlan(selectedKeys, effectivePlan);
   if (!validation.valid) {
     throw new Error("Algumas opções selecionadas exigem plano Pro. Ajuste as configurações e tente novamente.");
@@ -114,6 +124,23 @@ export async function generateFinalPrompt(
  
   const prompt = data?.prompt;
   if (!prompt) throw new Error("Erro ao gerar prompt final. Tente novamente.");
- 
-  return prompt;
+  const usedKeys = Array.isArray(data?.usedKeys)
+    ? data.usedKeys.filter((key: unknown) => typeof key === "string")
+    : [];
+
+  const wordCount = prompt.trim().split(/\s+/).filter(Boolean).length;
+  const { error: insertError } = await supabase.from("prompt_history").insert({
+    user_id: historyContext?.userId,
+    prompt,
+    image_preview: historyContext?.imagePreview || null,
+    render_config: historyContext?.renderConfig ?? {},
+    word_count: wordCount,
+  });
+
+  if (insertError) {
+    console.error("prompt_history insert error:", insertError);
+    throw new Error("Prompt gerado, mas houve erro ao salvar no histórico.");
+  }
+
+  return { prompt, usedKeys };
 }

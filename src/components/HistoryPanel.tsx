@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
-import { Clock, Trash2, Copy, X } from "lucide-react";
+import { Clock, Trash2, Copy, X, Star } from "lucide-react";
 import { getHistory, clearHistory, PromptHistoryItem } from "@/lib/history";
+import { supabase } from "@/integrations/supabase/client";
+
+type HistoryItemWithFavorite = PromptHistoryItem & {
+  is_favorite?: boolean | null;
+};
 
 interface HistoryPanelProps {
   open: boolean;
@@ -8,7 +13,7 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
-  const [items, setItems] = useState<PromptHistoryItem[]>([]);
+  const [items, setItems] = useState<HistoryItemWithFavorite[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,6 +33,22 @@ export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
   const handleClear = async () => {
     await clearHistory();
     setItems([]);
+  };
+
+  const handleToggleFavorite = async (item: HistoryItemWithFavorite) => {
+    const nextValue = !item.is_favorite;
+    const { error } = await supabase
+      .from("prompt_history")
+      .update({ is_favorite: nextValue })
+      .eq("id", item.id);
+
+    if (error) return;
+
+    setItems((prev) =>
+      prev.map((entry) =>
+        entry.id === item.id ? { ...entry, is_favorite: nextValue } : entry,
+      ),
+    );
   };
 
   return (
@@ -74,11 +95,19 @@ export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
                 </p>
                 <button
                   onClick={() => handleCopy(item.prompt, item.id)}
-                  className="flex items-center gap-1.5 font-mono text-xs transition-colors"
+                  className="flex items-center gap-1.5 font-mono text-xs transition-colors mr-3"
                   style={{ color: copiedId === item.id ? "hsl(142 70% 45%)" : "hsl(var(--gold))" }}
                 >
                   <Copy className="w-3 h-3" />
                   {copiedId === item.id ? "Copiado!" : "Copiar"}
+                </button>
+                <button
+                  onClick={() => handleToggleFavorite(item)}
+                  className="inline-flex items-center gap-1.5 font-mono text-xs transition-colors"
+                  style={{ color: item.is_favorite ? "hsl(var(--gold))" : "hsl(var(--muted-foreground))" }}
+                >
+                  <Star className="w-3 h-3" fill={item.is_favorite ? "hsl(var(--gold))" : "none"} />
+                  {item.is_favorite ? "Favorito" : "Favoritar"}
                 </button>
               </div>
             ))}
