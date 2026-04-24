@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Copy, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Copy, RotateCcw, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import ProfileLayout from "@/components/ProfileLayout";
 import { toast } from "sonner";
 import { usePromptHistory, PromptHistoryItem } from "@/hooks/usePromptHistory";
@@ -17,9 +17,10 @@ const renderTypes = [
 
 export default function History() {
   const navigate = useNavigate();
-  const { prompts, loading, error } = usePromptHistory();
+  const { prompts, loading, error, toggleFavorite } = usePromptHistory();
   const [filteredPrompts, setFilteredPrompts] = useState<PromptHistoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeSection, setActiveSection] = useState<"geral" | "favoritos">("geral");
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function History() {
 
   useEffect(() => {
     filterPrompts();
-  }, [prompts, searchTerm, activeFilter]);
+  }, [prompts, searchTerm, activeFilter, activeSection]);
 
   useEffect(() => {
     if (error) toast.error(error);
@@ -42,6 +43,10 @@ export default function History() {
 
   const filterPrompts = () => {
     let filtered = prompts;
+
+    if (activeSection === "favoritos") {
+      filtered = filtered.filter((p) => Boolean(p.is_favorite));
+    }
 
     if (activeFilter !== "Todos") {
       filtered = filtered.filter(p => toStr(getConfig(p).renderType) === activeFilter);
@@ -71,6 +76,15 @@ export default function History() {
   const regeneratePrompt = (promptData: PromptHistoryItem) => {
     sessionStorage.setItem('regenerateConfig', JSON.stringify(getConfig(promptData)));
     navigate('/');
+  };
+
+  const handleToggleFavorite = async (promptData: PromptHistoryItem) => {
+    try {
+      await toggleFavorite(promptData.id, Boolean(promptData.is_favorite));
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+      toast.error("Erro ao atualizar favorito");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -137,6 +151,31 @@ export default function History() {
             style={{ background: "#111111", border: "1px solid #1e1e1e", color: "#888888" }}>
             {filteredPrompts.length} prompts no total
           </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveSection("geral")}
+            className="px-4 py-2 rounded-full font-mono text-xs transition-colors duration-200"
+            style={{
+              background: activeSection === "geral" ? "#1a1400" : "#111111",
+              border: activeSection === "geral" ? "1px solid #C9A84C" : "1px solid #1e1e1e",
+              color: activeSection === "geral" ? "#C9A84C" : "#888888",
+            }}
+          >
+            Geral
+          </button>
+          <button
+            onClick={() => setActiveSection("favoritos")}
+            className="px-4 py-2 rounded-full font-mono text-xs transition-colors duration-200"
+            style={{
+              background: activeSection === "favoritos" ? "#1a1400" : "#111111",
+              border: activeSection === "favoritos" ? "1px solid #C9A84C" : "1px solid #1e1e1e",
+              color: activeSection === "favoritos" ? "#C9A84C" : "#888888",
+            }}
+          >
+            Favoritos
+          </button>
         </div>
 
         {/* Filters */}
@@ -237,6 +276,17 @@ export default function History() {
 
                     {/* Actions */}
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleFavorite(prompt)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs transition-colors duration-200"
+                        style={{
+                          border: "1px solid #1e1e1e",
+                          color: prompt.is_favorite ? "#C9A84C" : "#888888",
+                        }}
+                      >
+                        <Star className="w-3 h-3" fill={prompt.is_favorite ? "#C9A84C" : "none"} />
+                        {prompt.is_favorite ? "Favorito" : "Favoritar"}
+                      </button>
                       <button
                         onClick={() => copyPrompt(prompt.prompt, prompt.id)}
                         className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs transition-colors duration-200"

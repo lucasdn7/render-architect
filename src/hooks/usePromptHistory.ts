@@ -8,6 +8,7 @@ export interface PromptHistoryItem {
   created_at: string;
   image_preview: string | null;
   word_count: number | null;
+  is_favorite: boolean | null;
 }
 
 export function usePromptHistory() {
@@ -31,7 +32,7 @@ export function usePromptHistory() {
 
       const { data, error: queryError } = await supabase
         .from("prompt_history")
-        .select("id, prompt, render_config, created_at, image_preview, word_count")
+        .select("id, prompt, render_config, created_at, image_preview, word_count, is_favorite")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -47,6 +48,21 @@ export function usePromptHistory() {
     }
   }, []);
 
+  const toggleFavorite = useCallback(async (id: string, isFavorite: boolean) => {
+    const { error: updateError } = await supabase
+      .from("prompt_history")
+      .update({ is_favorite: !isFavorite })
+      .eq("id", id);
+
+    if (updateError) throw updateError;
+
+    setPrompts((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, is_favorite: !isFavorite } : item,
+      ),
+    );
+  }, []);
+
   useEffect(() => {
     loadPromptHistory();
   }, [loadPromptHistory]);
@@ -56,5 +72,6 @@ export function usePromptHistory() {
     loading,
     error,
     reload: loadPromptHistory,
+    toggleFavorite,
   };
 }

@@ -2,6 +2,15 @@ import { useState, useEffect } from "react";
 import ProfileLayout from "@/components/ProfileLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface UserSettings {
   fullName: string;
@@ -45,6 +54,7 @@ const DASHBOARD_ONLY_TABLES = [
 ] as const;
 
 export default function Settings() {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettings>({
     fullName: '',
     email: '',
@@ -73,6 +83,8 @@ export default function Settings() {
   const [selectedTable, setSelectedTable] = useState<string>("collections");
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
   const [tableRowsLoading, setTableRowsLoading] = useState(false);
+  const [showCancelPlanDialog, setShowCancelPlanDialog] = useState(false);
+  const [cancelingPlan, setCancelingPlan] = useState(false);
 
   useEffect(() => {
     loadUserSettings();
@@ -269,6 +281,33 @@ export default function Settings() {
       toast.error("Não foi possível carregar os registros da tabela selecionada.");
     } finally {
       setTableRowsLoading(false);
+    }
+  };
+
+  const cancelSubscription = async () => {
+    try {
+      setCancelingPlan(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Usuário não autenticado");
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/cancel-subscription`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Erro ao cancelar assinatura");
+
+      toast.success("Assinatura cancelada com sucesso.");
+      setShowCancelPlanDialog(false);
+    } catch (error) {
+      console.error("Error canceling subscription:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao cancelar assinatura");
+    } finally {
+      setCancelingPlan(false);
     }
   };
 
@@ -560,6 +599,32 @@ export default function Settings() {
           </div>
         </div>
 
+        <div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="font-mono text-xs font-medium" style={{ color: "#C9A84C" }}>
+              PLANO
+            </div>
+            <div className="flex-1 h-px" style={{ background: "#1e1e1e" }} />
+          </div>
+
+          <div className="p-7 rounded-xl border flex flex-wrap gap-3" style={{ background: "#111111", borderColor: "#1e1e1e" }}>
+            <button
+              onClick={() => navigate("/creditos")}
+              className="px-5 py-2.5 rounded-lg font-mono text-sm font-bold transition-colors duration-200"
+              style={{ background: "#C9A84C", color: "#000" }}
+            >
+              Alterar plano
+            </button>
+            <button
+              onClick={() => setShowCancelPlanDialog(true)}
+              className="px-5 py-2.5 rounded-lg font-mono text-sm transition-colors duration-200"
+              style={{ border: "1px solid #c0392b", color: "#c0392b" }}
+            >
+              Cancelar plano
+            </button>
+          </div>
+        </div>
+
         {/* Danger Zone */}
         <div>
           <div className="flex items-center gap-4 mb-4">
@@ -752,6 +817,34 @@ export default function Settings() {
             </div>
           </div>
         )}
+
+        <Dialog open={showCancelPlanDialog} onOpenChange={setShowCancelPlanDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancelar plano</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja cancelar sua assinatura? Você perderá os benefícios do plano no próximo ciclo.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <button
+                onClick={() => setShowCancelPlanDialog(false)}
+                className="px-4 py-2 rounded-lg font-mono text-sm transition-colors duration-200"
+                style={{ border: "1px solid #333", color: "#888" }}
+              >
+                Voltar
+              </button>
+              <button
+                onClick={cancelSubscription}
+                disabled={cancelingPlan}
+                className="px-4 py-2 rounded-lg font-mono text-sm transition-colors duration-200"
+                style={{ background: "#c0392b", color: "#fff", opacity: cancelingPlan ? 0.7 : 1 }}
+              >
+                {cancelingPlan ? "Cancelando..." : "Confirmar cancelamento"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ProfileLayout>
   );

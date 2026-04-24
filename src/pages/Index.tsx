@@ -52,6 +52,7 @@ const initialState: WizardState = {
 
 export default function Index() {
   const [state, setState] = useState<WizardState>(initialState);
+  const [usedKeys, setUsedKeys] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -212,7 +213,7 @@ export default function Index() {
       const imageDescription = state.analysis?.FULL_DESCRIPTION || "";
       const generationPlan = (finalConsumption.effective_plan as PlanTier | null) ?? effectivePlan;
 
-      const prompt = await generateFinalPrompt(
+      const generated = await generateFinalPrompt(
         imageDescription,
         selectedKeys,
         generationPlan,
@@ -229,7 +230,8 @@ export default function Index() {
         }
       );
 
-      update({ finalPrompt: prompt });
+      update({ finalPrompt: generated.prompt });
+      setUsedKeys(generated.usedKeys);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao gerar prompt";
       toast.error(message);
@@ -240,7 +242,10 @@ export default function Index() {
   };
 
   
-  const handleReset = () => setState(initialState);
+  const handleReset = () => {
+    setState(initialState);
+    setUsedKeys([]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -298,6 +303,7 @@ export default function Index() {
         {state.currentStep === 4 && (
           <StepResult
             prompt={state.finalPrompt}
+            usedKeys={usedKeys}
             isGenerating={isGenerating}
             onReset={handleReset}
           />
