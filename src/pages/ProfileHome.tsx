@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Plus, Sparkles, TrendingUp, Clock } from "lucide-react";
 import ProfileLayout from "@/components/ProfileLayout";
+import PollWidget from "@/components/PollWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -160,6 +161,8 @@ export default function ProfileHome() {
             Membro desde {stats?.memberSince || 'hoje'}
           </div>
         </div>
+
+        <PollWidget />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-4">
