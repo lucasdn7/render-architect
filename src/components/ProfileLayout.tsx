@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { User, CreditCard, History, Settings, LogOut } from "lucide-react";
+import { User, CreditCard, History, Settings, LogOut, MessageSquare, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,26 @@ export default function ProfileLayout({ children, title, subtitle }: ProfileLayo
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const loadAdminAccess = async () => {
+      if (!user?.id) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles" as never)
+        .select("is_admin")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setIsAdmin(Boolean((data as { is_admin?: boolean } | null)?.is_admin));
+    };
+
+    void loadAdminAccess();
+  }, [user?.id]);
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -37,12 +58,13 @@ export default function ProfileLayout({ children, title, subtitle }: ProfileLayo
     const path = location.pathname;
     if (path.includes("/creditos")) return "credits";
     if (path.includes("/historico")) return "history";
+    if (path.includes("/sugestoes")) return "suggestions";
     if (path.includes("/configuracoes")) return "settings";
+    if (path.includes("/admin")) return "admin";
     return "profile";
   };
 
   const handleSignOut = async () => {
-    const { supabase } = await import("@/integrations/supabase/client");
     await supabase.auth.signOut();
     navigate("/");
   };
@@ -142,6 +164,29 @@ export default function ProfileLayout({ children, title, subtitle }: ProfileLayo
                 </button>
 
                 <button
+                  onClick={() => navigate("/sugestoes")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                    getActiveTab() === "suggestions" ? "text-white" : "text-muted-foreground"
+                  }`}
+                  style={getActiveTab() === "suggestions" ? { background: "#1a1a1a", borderLeft: "2px solid #C9A84C" } : {}}
+                  onMouseEnter={(e) => {
+                    if (getActiveTab() !== "suggestions") {
+                      e.currentTarget.style.background = "#141414";
+                      e.currentTarget.style.color = "#FFFFFF";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (getActiveTab() !== "suggestions") {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "#888888";
+                    }
+                  }}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="font-mono text-sm">Sugestões</span>
+                </button>
+
+                <button
                   onClick={() => navigate("/configuracoes")}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     getActiveTab() === "settings" ? "text-white" : "text-muted-foreground"
@@ -163,6 +208,31 @@ export default function ProfileLayout({ children, title, subtitle }: ProfileLayo
                   <Settings className="w-4 h-4" />
                   <span className="font-mono text-sm">Configurações</span>
                 </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate("/admin")}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                      getActiveTab() === "admin" ? "text-white" : "text-muted-foreground"
+                    }`}
+                    style={getActiveTab() === "admin" ? { background: "#1a1a1a", borderLeft: "2px solid #C9A84C" } : {}}
+                    onMouseEnter={(e) => {
+                      if (getActiveTab() !== "admin") {
+                        e.currentTarget.style.background = "#141414";
+                        e.currentTarget.style.color = "#FFFFFF";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (getActiveTab() !== "admin") {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#888888";
+                      }
+                    }}
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span className="font-mono text-sm">Admin</span>
+                  </button>
+                )}
               </nav>
 
               {/* Logout */}
