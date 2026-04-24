@@ -47,3 +47,43 @@ export interface WizardState {
   humanization: HumanizationConfig;
   finalPrompt: string;
 }
+
+export interface Suggestion {
+  id: string;
+  user_id: string;
+  subject: string;
+  message: string;
+  created_at: string;
+}
+
+export interface Poll {
+  id: string;
+  created_by: string;
+  question: string;
+  is_active: boolean;
+  created_at: string;
+  ends_at: string | null;
+}
+
+export interface PollOption {
+  id: string;
+  poll_id: string;
+  label: string;
+  display_order: number;
+}
+
+export interface PollVote {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface PollResult {
+  poll_id: string;
+  option_id: string;
+  label: string;
+  display_order: number;
+  vote_count: number;
+}
