@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Check, Copy, RotateCcw, Pencil, Eye, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface StepResultProps {
   prompt: string;
+  usedKeys?: string[];
   isGenerating?: boolean;
   onReset: () => void;
 }
@@ -14,7 +16,7 @@ const SECTION_COLORS: Record<string, { color: string; label: string }> = {
   suffix: { color: "#CCCCCC", label: "⚪ Sufixo Técnico" },
 };
 
-export default function StepResult({ prompt, isGenerating, onReset }: StepResultProps) {
+export default function StepResult({ prompt, usedKeys = [], isGenerating, onReset }: StepResultProps) {
   const [copied, setCopied] = useState(false);
   const [editable, setEditable] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(prompt);
@@ -28,6 +30,25 @@ export default function StepResult({ prompt, isGenerating, onReset }: StepResult
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const handleExportTxt = () => {
+    const blob = new Blob([currentPrompt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `prompt-${Date.now()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const formatKeyLabel = (key: string) =>
+    key
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ");
 
   if (isGenerating) {
     return (
@@ -66,6 +87,16 @@ export default function StepResult({ prompt, isGenerating, onReset }: StepResult
         </span>
       </div>
 
+      {usedKeys.length > 0 && (
+        <div className="flex flex-wrap gap-2 justify-center mb-4">
+          {usedKeys.map((key) => (
+            <Badge key={key} variant="outline" className="font-mono text-[11px]">
+              {formatKeyLabel(key)}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {/* Prompt Output */}
       <div className="surface-card p-1 mb-4">
         {editable ? (
@@ -94,6 +125,13 @@ export default function StepResult({ prompt, isGenerating, onReset }: StepResult
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Copiado!" : "Copiar Prompt"}
+        </button>
+        <button
+          onClick={handleExportTxt}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-mono text-sm font-medium border transition-all duration-200 active:scale-[0.97]"
+          style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
+        >
+          Exportar .txt
         </button>
         <button
           onClick={onReset}

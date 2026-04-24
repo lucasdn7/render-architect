@@ -1,18 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Copy, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Copy, RotateCcw, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import ProfileLayout from "@/components/ProfileLayout";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface PromptHistory {
-  id: string;
-  prompt: string;
-  render_config: any;
-  created_at: string;
-  image_preview?: string;
-  word_count: number;
-}
+import { usePromptHistory, PromptHistoryItem } from "@/hooks/usePromptHistory";
 
 const renderTypes = [
   "Todos",
@@ -26,46 +17,24 @@ const renderTypes = [
 
 export default function History() {
   const navigate = useNavigate();
-  const [prompts, setPrompts] = useState<PromptHistory[]>([]);
-  const [filteredPrompts, setFilteredPrompts] = useState<PromptHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { prompts, loading, error, toggleFavorite } = usePromptHistory();
+  const [filteredPrompts, setFilteredPrompts] = useState<PromptHistoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeSection, setActiveSection] = useState<"geral" | "favoritos">("geral");
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
-    loadPromptHistory();
-  }, []);
+    filterPrompts();
+  }, [prompts, searchTerm, activeFilter, activeSection]);
 
   useEffect(() => {
-    filterPrompts();
-  }, [prompts, searchTerm, activeFilter]);
+    if (error) toast.error(error);
+  }, [error]);
 
-  const loadPromptHistory = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('prompt_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPrompts(data || []);
-    } catch (error) {
-      console.error('Error loading prompt history:', error);
-      toast.error('Erro ao carregar histórico');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getConfig = (p: PromptHistory) =>
+  const getConfig = (p: PromptHistoryItem) =>
     p.render_config && typeof p.render_config === 'object' && !Array.isArray(p.render_config)
       ? (p.render_config as any)
       : {};
@@ -74,6 +43,10 @@ export default function History() {
 
   const filterPrompts = () => {
     let filtered = prompts;
+
+    if (activeSection === "favoritos") {
+      filtered = filtered.filter((p) => Boolean(p.is_favorite));
+    }
 
     if (activeFilter !== "Todos") {
       filtered = filtered.filter(p => toStr(getConfig(p).renderType) === activeFilter);
@@ -100,9 +73,18 @@ export default function History() {
     }
   };
 
-  const regeneratePrompt = (promptData: PromptHistory) => {
+  const regeneratePrompt = (promptData: PromptHistoryItem) => {
     sessionStorage.setItem('regenerateConfig', JSON.stringify(getConfig(promptData)));
     navigate('/');
+  };
+
+  const handleToggleFavorite = async (promptData: PromptHistoryItem) => {
+    try {
+      await toggleFavorite(promptData.id, Boolean(promptData.is_favorite));
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+      toast.error("Erro ao atualizar favorito");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -116,10 +98,10 @@ export default function History() {
     });
   };
 
-  const getRenderType = (p: PromptHistory) => toStr(getConfig(p).renderType) || 'Render Externo';
-  const getLighting = (p: PromptHistory) => toStr(getConfig(p).lighting) || 'Diurno';
-  const getEnvironments = (p: PromptHistory) => toArr(getConfig(p).environments);
-  const getSurroundings = (p: PromptHistory) => toArr(getConfig(p).surroundings);
+  const getRenderType = (p: PromptHistoryItem) => toStr(getConfig(p).renderType) || 'Render Externo';
+  const getLighting = (p: PromptHistoryItem) => toStr(getConfig(p).lighting) || 'Diurno';
+  const getEnvironments = (p: PromptHistoryItem) => toArr(getConfig(p).environments);
+  const getSurroundings = (p: PromptHistoryItem) => toArr(getConfig(p).surroundings);
 
   // Pagination
   const totalPages = Math.ceil(filteredPrompts.length / itemsPerPage);
@@ -169,6 +151,31 @@ export default function History() {
             style={{ background: "#111111", border: "1px solid #1e1e1e", color: "#888888" }}>
             {filteredPrompts.length} prompts no total
           </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveSection("geral")}
+            className="px-4 py-2 rounded-full font-mono text-xs transition-colors duration-200"
+            style={{
+              background: activeSection === "geral" ? "#1a1400" : "#111111",
+              border: activeSection === "geral" ? "1px solid #C9A84C" : "1px solid #1e1e1e",
+              color: activeSection === "geral" ? "#C9A84C" : "#888888",
+            }}
+          >
+            Geral
+          </button>
+          <button
+            onClick={() => setActiveSection("favoritos")}
+            className="px-4 py-2 rounded-full font-mono text-xs transition-colors duration-200"
+            style={{
+              background: activeSection === "favoritos" ? "#1a1400" : "#111111",
+              border: activeSection === "favoritos" ? "1px solid #C9A84C" : "1px solid #1e1e1e",
+              color: activeSection === "favoritos" ? "#C9A84C" : "#888888",
+            }}
+          >
+            Favoritos
+          </button>
         </div>
 
         {/* Filters */}
@@ -269,6 +276,17 @@ export default function History() {
 
                     {/* Actions */}
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleFavorite(prompt)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs transition-colors duration-200"
+                        style={{
+                          border: "1px solid #1e1e1e",
+                          color: prompt.is_favorite ? "#C9A84C" : "#888888",
+                        }}
+                      >
+                        <Star className="w-3 h-3" fill={prompt.is_favorite ? "#C9A84C" : "none"} />
+                        {prompt.is_favorite ? "Favorito" : "Favoritar"}
+                      </button>
                       <button
                         onClick={() => copyPrompt(prompt.prompt, prompt.id)}
                         className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs transition-colors duration-200"
