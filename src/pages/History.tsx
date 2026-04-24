@@ -2,17 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Copy, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import ProfileLayout from "@/components/ProfileLayout";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface PromptHistory {
-  id: string;
-  prompt: string;
-  render_config: any;
-  created_at: string;
-  image_preview?: string;
-  word_count: number;
-}
+import { usePromptHistory, PromptHistoryItem } from "@/hooks/usePromptHistory";
 
 const renderTypes = [
   "Todos",
@@ -26,9 +17,8 @@ const renderTypes = [
 
 export default function History() {
   const navigate = useNavigate();
-  const [prompts, setPrompts] = useState<PromptHistory[]>([]);
-  const [filteredPrompts, setFilteredPrompts] = useState<PromptHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { prompts, loading, error } = usePromptHistory();
+  const [filteredPrompts, setFilteredPrompts] = useState<PromptHistoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,36 +26,14 @@ export default function History() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    loadPromptHistory();
-  }, []);
-
-  useEffect(() => {
     filterPrompts();
   }, [prompts, searchTerm, activeFilter]);
 
-  const loadPromptHistory = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
 
-      const { data, error } = await supabase
-        .from('prompt_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPrompts(data || []);
-    } catch (error) {
-      console.error('Error loading prompt history:', error);
-      toast.error('Erro ao carregar histórico');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getConfig = (p: PromptHistory) =>
+  const getConfig = (p: PromptHistoryItem) =>
     p.render_config && typeof p.render_config === 'object' && !Array.isArray(p.render_config)
       ? (p.render_config as any)
       : {};
@@ -100,7 +68,7 @@ export default function History() {
     }
   };
 
-  const regeneratePrompt = (promptData: PromptHistory) => {
+  const regeneratePrompt = (promptData: PromptHistoryItem) => {
     sessionStorage.setItem('regenerateConfig', JSON.stringify(getConfig(promptData)));
     navigate('/');
   };
@@ -116,10 +84,10 @@ export default function History() {
     });
   };
 
-  const getRenderType = (p: PromptHistory) => toStr(getConfig(p).renderType) || 'Render Externo';
-  const getLighting = (p: PromptHistory) => toStr(getConfig(p).lighting) || 'Diurno';
-  const getEnvironments = (p: PromptHistory) => toArr(getConfig(p).environments);
-  const getSurroundings = (p: PromptHistory) => toArr(getConfig(p).surroundings);
+  const getRenderType = (p: PromptHistoryItem) => toStr(getConfig(p).renderType) || 'Render Externo';
+  const getLighting = (p: PromptHistoryItem) => toStr(getConfig(p).lighting) || 'Diurno';
+  const getEnvironments = (p: PromptHistoryItem) => toArr(getConfig(p).environments);
+  const getSurroundings = (p: PromptHistoryItem) => toArr(getConfig(p).surroundings);
 
   // Pagination
   const totalPages = Math.ceil(filteredPrompts.length / itemsPerPage);

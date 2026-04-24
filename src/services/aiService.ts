@@ -81,6 +81,11 @@ export async function generateFinalPrompt(
     peopleDescription: string;
     addAnimals: boolean;
     animalDescription: string;
+  },
+  historyContext?: {
+    userId: string;
+    imagePreview?: string | null;
+    renderConfig?: Record<string, unknown>;
   }
 ): Promise<string> {
   const validation = validateSelectedPromptKeysByPlan(selectedKeys, effectivePlan);
@@ -114,6 +119,20 @@ export async function generateFinalPrompt(
  
   const prompt = data?.prompt;
   if (!prompt) throw new Error("Erro ao gerar prompt final. Tente novamente.");
- 
+
+  const wordCount = prompt.trim().split(/\s+/).filter(Boolean).length;
+  const { error: insertError } = await supabase.from("prompt_history").insert({
+    user_id: historyContext?.userId,
+    prompt,
+    image_preview: historyContext?.imagePreview || null,
+    render_config: historyContext?.renderConfig ?? {},
+    word_count: wordCount,
+  });
+
+  if (insertError) {
+    console.error("prompt_history insert error:", insertError);
+    throw new Error("Prompt gerado, mas houve erro ao salvar no histórico.");
+  }
+
   return prompt;
 }

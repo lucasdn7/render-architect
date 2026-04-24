@@ -11,7 +11,6 @@ import StepHumanization from "@/components/StepHumanization";
 import StepResult from "@/components/StepResult";
 import HistoryPanel from "@/components/HistoryPanel";
 import { WizardState } from "@/types/promptRender";
-import { addToHistory } from "@/lib/history";
 import { analyzeImage, generateFinalPrompt } from "@/services/aiService";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +56,7 @@ export default function Index() {
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0]);
   const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
-  const { credits, refreshCredits, currentPlan, bonusCredits } = useAuth();
+  const { user, credits, refreshCredits, currentPlan, bonusCredits } = useAuth();
   const effectivePlan = getEffectivePlan(currentPlan, bonusCredits > 0);
 
   const update = useCallback((partial: Partial<WizardState>) => {
@@ -205,6 +204,10 @@ export default function Index() {
     update({ currentStep: 4 });
 
     try {
+      if (!user?.id) {
+        throw new Error("Sessão inválida. Faça login novamente.");
+      }
+
       const selectedKeys = getSelectedKeys();
       const imageDescription = state.analysis?.FULL_DESCRIPTION || "";
       const generationPlan = (finalConsumption.effective_plan as PlanTier | null) ?? effectivePlan;
@@ -213,20 +216,20 @@ export default function Index() {
         imageDescription,
         selectedKeys,
         generationPlan,
-        state.humanization
+        state.humanization,
+        {
+          userId: user.id,
+          imagePreview: state.imagePreview,
+          renderConfig: {
+            ...state.renderConfig,
+            humanization: state.humanization,
+            creditType: finalConsumption.credit_type,
+            effectivePlan: generationPlan,
+          },
+        }
       );
 
       update({ finalPrompt: prompt });
-      await addToHistory({
-        prompt,
-        imagePreview: state.imagePreview || undefined,
-        renderConfig: {
-          render: state.renderConfig,
-          humanization: state.humanization,
-          creditType: finalConsumption.credit_type,
-          effectivePlan: generationPlan,
-        },
-      });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao gerar prompt";
       toast.error(message);
