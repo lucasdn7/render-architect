@@ -37,10 +37,20 @@ export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
 
   const handleToggleFavorite = async (item: HistoryItemWithFavorite) => {
     const nextValue = !item.is_favorite;
-    const { error } = await supabase
-      .from("prompt_history")
-      .update({ is_favorite: nextValue })
-      .eq("id", item.id);
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
+    const { error } = nextValue
+      ? await supabase.from("favorites" as never).insert({
+          user_id: userId,
+          prompt_history_id: item.id,
+        } as never)
+      : await supabase
+          .from("favorites" as never)
+          .delete()
+          .eq("user_id", userId)
+          .eq("prompt_history_id", item.id);
 
     if (error) return;
 
@@ -89,6 +99,9 @@ export default function HistoryPanel({ open, onClose }: HistoryPanelProps) {
                   {new Date(item.created_at).toLocaleDateString("pt-BR", {
                     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
                   })}
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground mb-2">
+                  {item.is_favorite ? "Favorito · não expira" : `Expira em ${item.days_remaining ?? 0} dia(s)`}
                 </div>
                 <p className="font-mono text-xs text-foreground leading-relaxed line-clamp-4 mb-3">
                   {item.prompt}

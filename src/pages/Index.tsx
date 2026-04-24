@@ -48,6 +48,7 @@ const initialState: WizardState = {
     animalDescription: "",
   },
   finalPrompt: "",
+  finalPromptId: null,
 };
 
 export default function Index() {
@@ -230,7 +231,7 @@ export default function Index() {
         }
       );
 
-      update({ finalPrompt: generated.prompt });
+      update({ finalPrompt: generated.prompt, finalPromptId: generated.historyId });
       setUsedKeys(generated.usedKeys);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro ao gerar prompt";
@@ -303,6 +304,7 @@ export default function Index() {
         {state.currentStep === 4 && (
           <StepResult
             prompt={state.finalPrompt}
+            promptId={state.finalPromptId}
             usedKeys={usedKeys}
             isGenerating={isGenerating}
             onReset={handleReset}

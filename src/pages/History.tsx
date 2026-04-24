@@ -266,6 +266,12 @@ export default function History() {
                       </div>
                       <div className="font-mono text-xs text-muted-foreground text-right">
                         {formatDate(prompt.created_at)}
+                        {!prompt.is_favorite && typeof prompt.days_remaining === "number" && (
+                          <div>Expira em {prompt.days_remaining} dia(s)</div>
+                        )}
+                        {prompt.is_favorite && (
+                          <div>Favorito · não expira</div>
+                        )}
                       </div>
                     </div>
 

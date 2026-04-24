@@ -46,6 +46,7 @@ export interface WizardState {
   renderConfig: RenderConfig;
   humanization: HumanizationConfig;
   finalPrompt: string;
+  finalPromptId: string | null;
 }
 
 export interface Suggestion {

@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { Check, Copy, RotateCcw, Pencil, Eye, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, RotateCcw, Pencil, Eye, Loader2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface StepResultProps {
   prompt: string;
+  promptId?: string | null;
   usedKeys?: string[];
   isGenerating?: boolean;
   onReset: () => void;
@@ -16,11 +19,17 @@ const SECTION_COLORS: Record<string, { color: string; label: string }> = {
   suffix: { color: "#CCCCCC", label: "⚪ Sufixo Técnico" },
 };
 
-export default function StepResult({ prompt, usedKeys = [], isGenerating, onReset }: StepResultProps) {
+export default function StepResult({ prompt, promptId, usedKeys = [], isGenerating, onReset }: StepResultProps) {
   const [copied, setCopied] = useState(false);
   const [editable, setEditable] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(prompt);
   const [showStructure, setShowStructure] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+  useEffect(() => {
+    setIsFavorite(false);
+  }, [promptId, prompt]);
 
   const currentPrompt = editable ? editedPrompt : prompt;
   const wordCount = currentPrompt.trim().split(/\s+/).filter(Boolean).length;
@@ -49,6 +58,47 @@ export default function StepResult({ prompt, usedKeys = [], isGenerating, onRese
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
       .join(" ");
+
+  const handleToggleFavorite = async () => {
+    if (!promptId) return;
+
+    try {
+      setFavoriteLoading(true);
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        toast.error("Faça login novamente para favoritar.");
+        return;
+      }
+
+      if (isFavorite) {
+        const { error } = await supabase
+          .from("favorites" as never)
+          .delete()
+          .eq("user_id", userId)
+          .eq("prompt_history_id", promptId);
+
+        if (error) throw error;
+        setIsFavorite(false);
+        toast.success("Prompt removido dos favoritos.");
+        return;
+      }
+
+      const { error } = await supabase.from("favorites" as never).insert({
+        user_id: userId,
+        prompt_history_id: promptId,
+      } as never);
+
+      if (error) throw error;
+      setIsFavorite(true);
+      toast.success("Prompt adicionado aos favoritos.");
+    } catch (error) {
+      console.error("Error toggling favorite from result:", error);
+      toast.error("Não foi possível atualizar favorito.");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
 
   if (isGenerating) {
     return (
@@ -132,6 +182,18 @@ export default function StepResult({ prompt, usedKeys = [], isGenerating, onRese
           style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
         >
           Exportar .txt
+        </button>
+        <button
+          onClick={handleToggleFavorite}
+          disabled={!promptId || favoriteLoading}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-mono text-sm font-medium border transition-all duration-200 active:scale-[0.97] disabled:opacity-60"
+          style={{
+            borderColor: isFavorite ? "hsl(var(--gold))" : "hsl(var(--border))",
+            color: isFavorite ? "hsl(var(--gold))" : "hsl(var(--foreground))",
+          }}
+        >
+          <Star className="w-4 h-4" fill={isFavorite ? "hsl(var(--gold))" : "none"} />
+          {isFavorite ? "Favorito" : "Favoritar"}
         </button>
         <button
           onClick={onReset}
