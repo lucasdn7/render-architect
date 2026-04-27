@@ -15,13 +15,14 @@ tecnicamente otimizado para motores de renderização de última geração.`;
  
 const MASTER_MERGE_PROMPT = `As an expert AI prompt meshing system for architectural visualization, your task is to combine selected prompt blocks into a single, coherent, and highly effective rendering prompt. Follow this strict hierarchical order and conflict resolution strategy:
 1. TIPO DE RENDER (Mandatório - Selecione UM): Este bloco define a intenção geral da renderização, o estilo e a qualidade global. Ele atua como a diretriz principal para a IA.
-2. PERÍODO DO DIA/ILUMINAÇÃO (Mandatório - Selecione UM): Este bloco define as condições de iluminação global, propriedades das fontes de luz (posição do sol, temperatura de cor), condições do céu e efeitos atmosféricos. Ele deve complementar o Tipo de Render sem anular suas diretrizes principais.
-3. QUALIDADE / ESTILO DO RENDER (Mandatório - Selecione UM): Este bloco reforça as diretrizes de estilo e qualidade, aplicação geral de materiais PBR, técnicas de iluminação global e a instrução crítica sobre substituição de texturas. Atua como uma passagem final de qualidade.
-4. ELEMENTOS DO AMBIENTE (Opcional - Selecione ZERO ou MAIS): Este bloco introduz propriedades detalhadas de materiais (PBR, micro-imperfeições), efeitos de iluminação localizados (cáusticas, perfis IES) e características ambientais específicas (detalhes de vegetação, física da água). Esses detalhes devem ser integrados à cena, respeitando as configurações globais de iluminação e câmera estabelecidas pelos blocos anteriores. Priorize as definições de materiais PBR desses blocos sobre quaisquer menções genéricas de materiais.
-5. ENTORNO (Opcional - Selecione ZERO ou MAIS, até DOIS blocos de Entorno): Este bloco define o contexto circundante da arquitetura, como edifícios vizinhos, vegetação, ruas e elementos urbanos. Ele deve ser integrado à cena, respeitando a iluminação global e as configurações da câmera.
-6. CÂMERA PERSPECTIVA (Mandatório - Selecione UM): Este bloco estabelece o tipo fundamental de cena, parâmetros da câmera (lente, perspectiva, distância focal, profundidade de campo, balanço de branco, exposição) e instruções de preservação geométrica. Quaisquer instruções relacionadas à câmera de blocos subsequentes devem ser consideradas refinamentos secundários ou ignoradas se contradizerem diretamente a configuração primária da câmera.
-7. SUFIXO DE RENDERIZAÇÃO (Mandatório - Anexar SEMPRE ao final): Este sufixo contém instruções de renderização e pós-processamento de alta fidelidade, além de parâmetros específicos do Midjourney. Ele deve ser anexado ao final do prompt gerado, sem modificações.
-8. BLOCO DE PRESERVAÇÃO NEGATIVA (Mandatório - Anexar SEMPRE ao final): Este bloco é crucial para garantir que a geometria arquitetônica original do modelo 3D e a precisão do desenho 2D sejam preservadas, evitando distorções ou alterações indesejadas pela IA. Ele deve ser anexado ao final do prompt gerado, sem modificações.`;
+2. AMBIENTES INTERNOS (Opcional quando Tipo de Render for "render_interno" - Selecione ZERO ou MAIS): Este bloco define características específicas de cada ambiente interno selecionado (quarto, sala, cozinha, etc.), incluindo acabamentos, mobiliário, iluminação local e atmosfera particular de cada espaço. Deve ser aplicado imediatamente após o Tipo de Render para enriquecer a descrição interna antes das demais configurações globais.
+3. PERÍODO DO DIA/ILUMINAÇÃO (Mandatório - Selecione UM): Este bloco define as condições de iluminação global, propriedades das fontes de luz (posição do sol, temperatura de cor), condições do céu e efeitos atmosféricos. Ele deve complementar o Tipo de Render sem anular suas diretrizes principais.
+4. QUALIDADE / ESTILO DO RENDER (Mandatório - Selecione UM): Este bloco reforça as diretrizes de estilo e qualidade, aplicação geral de materiais PBR, técnicas de iluminação global e a instrução crítica sobre substituição de texturas. Atua como uma passagem final de qualidade.
+5. ELEMENTOS DO AMBIENTE (Opcional - Selecione ZERO ou MAIS): Este bloco introduz propriedades detalhadas de materiais (PBR, micro-imperfeições), efeitos de iluminação localizados (cáusticas, perfis IES) e características ambientais específicas (detalhes de vegetação, física da água). Esses detalhes devem ser integrados à cena, respeitando as configurações globais de iluminação e câmera estabelecidas pelos blocos anteriores. Priorize as definições de materiais PBR desses blocos sobre quaisquer menções genéricas de materiais.
+6. ENTORNO (Opcional - Selecione ZERO ou MAIS, até DOIS blocos de Entorno): Este bloco define o contexto circundante da arquitetura, como edifícios vizinhos, vegetação, ruas e elementos urbanos. Ele deve ser integrado à cena, respeitando a iluminação global e as configurações da câmera.
+7. CÂMERA PERSPECTIVA (Mandatório - Selecione UM): Este bloco estabelece o tipo fundamental de cena, parâmetros da câmera (lente, perspectiva, distância focal, profundidade de campo, balanço de branco, exposição) e instruções de preservação geométrica. Quaisquer instruções relacionadas à câmera de blocos subsequentes devem ser consideradas refinamentos secundários ou ignoradas se contradizerem diretamente a configuração primária da câmera.
+8. SUFIXO DE RENDERIZAÇÃO (Mandatório - Anexar SEMPRE ao final): Este sufixo contém instruções de renderização e pós-processamento de alta fidelidade, além de parâmetros específicos do Midjourney. Ele deve ser anexado ao final do prompt gerado, sem modificações.
+9. BLOCO DE PRESERVAÇÃO NEGATIVA (Mandatório - Anexar SEMPRE ao final): Este bloco é crucial para garantir que a geometria arquitetônica original do modelo 3D e a precisão do desenho 2D sejam preservadas, evitando distorções ou alterações indesejadas pela IA. Ele deve ser anexado ao final do prompt gerado, sem modificações.`;
  
 const MERGE_AGENT = `1. Prioridade Hierárquica: Sempre priorize as instruções dos blocos de nível superior sobre os de nível inferior em caso de conflito direto. A ordem dos blocos é: Câmera > Iluminação > Entorno > Estilo Global.
 2. Mesclagem Inteligente: Concatene os prompts de forma fluida, garantindo que a linguagem seja natural e tecnicamente precisa. Evite repetições desnecessárias, mas reforce termos-chave (ex: PBR, ray-traced) quando apropriado.
@@ -130,6 +131,40 @@ Final expected result: an image indistinguishable from a real photograph, mainta
   dutch_angle: `Camera rotated on its longitudinal axis between 15 and 35 degrees from horizontal, producing a deliberate diagonal tilt across the entire frame. The horizon line runs diagonally rather than horizontally, and all vertical architectural elements — columns, walls, window frames — are rendered at an angle relative to the frame edges. This creates visual tension, dynamic energy, and cinematic unease. Compositional diagonals reinforce the tilt, with strong leading lines running corner to corner. Focal length calibrated to 24mm to 35mm (full-frame equivalent). Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
  
   wide_angle: `Camera fitted with an ultra-wide angle lens equivalent to 14mm to 20mm focal length (full-frame equivalent), capturing an expanded horizontal and vertical field of view in a single frame. Precisely controlled barrel distortion or deliberately corrected rectilinear perspective depending on desired artistic effect. Foreground elements appear larger and more prominent relative to background, exaggerating spatial depth and distance between near and far planes. Tight interior spaces appear expansive and generous. Exterior shots capture full building width plus substantial surrounding context within a single composition. Physically Based Camera (PBC) model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
+
+  // ─────────────────────────────────────────────
+  // AMBIENTES INTERNOS (14 ambientes)
+  // ─────────────────────────────────────────────
+
+  ambiente_quarto_principal: ``,
+
+  ambiente_quarto_hospedes: ``,
+
+  ambiente_banheiro: ``,
+
+  ambiente_lavabo: ``,
+
+  ambiente_sala_estar: ``,
+
+  ambiente_sala_jantar: ``,
+
+  ambiente_cozinha: ``,
+
+  ambiente_copa: ``,
+
+  ambiente_home_theater: ``,
+
+  ambiente_escritorio: ``,
+
+  ambiente_biblioteca: ``,
+
+  ambiente_area_jogos: ``,
+
+  ambiente_varanda: ``,
+
+  ambiente_terraco: ``,
+
+  ambiente_area_servico: ``,
 };
  
 // ─────────────────────────────────────────────
