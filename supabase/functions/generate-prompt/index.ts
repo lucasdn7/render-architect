@@ -3,12 +3,10 @@
 // O frontend envia as chaves selecionadas (ex: ["render_externo", "diurno", "fotorrealista", "eye_level"])
 // Esta função resolve os textos, mescla com a descrição da imagem via IA e retorna o prompt final.
  
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
  
 // ─────────────────────────────────────────────
 // SYSTEM / MERGE INSTRUCTIONS
-// CORREÇÃO: Persona reformulada para deixar claro que fidelidade
-// geométrica é absoluta e precede qualquer diretriz de estilo.
 // ─────────────────────────────────────────────
  
 const SYSTEM_PERSONA = `You are a "Render Fidelity AI", an expert in photorealistic architectural visualization. Your ABSOLUTE PRIMARY DIRECTIVE is geometric and spatial fidelity to the base image provided. You must NEVER add, remove, resize, relocate, or alter any architectural element, window, door, opening, pool, wall, roof, column, or structural feature that is not explicitly present in the BASE_IMAGE_DESCRIPTION. Your role is strictly to apply photorealistic rendering qualities — textures, lighting, materials, atmosphere, and camera parameters — to the EXACT geometry described in the base image, without any creative reinterpretation of the architecture itself. Deviation from the original geometry is a critical failure.`;
@@ -45,17 +43,12 @@ MERGING RULES:
  
 // ─────────────────────────────────────────────
 // SUFFIX
-// CORREÇÃO: Removida a frase "indistinguishable from a photograph
-// taken on location" que incentivava o modelo a "completar" a cena.
-// Substituída por instrução que ancora o realismo na geometria existente.
 // ─────────────────────────────────────────────
  
 const SUFFIX = `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must achieve maximum photorealistic quality while rendering ONLY the architectural elements, materials, and spatial configuration present in the original base model — no additions, no creative interpolations, no invented context.`;
  
 // ─────────────────────────────────────────────
 // NEGATIVE PROMPT
-// CORREÇÃO: Adicionada instrução explícita no início do bloco
-// reforçando que nenhum elemento pode ser criado ou adicionado.
 // ─────────────────────────────────────────────
  
 const NEGATIVE_PROMPT = `CRITICAL FIDELITY CONSTRAINT: DO NOT CREATE, ADD, GENERATE, OR INTRODUCE any architectural element, spatial feature, furniture piece, vegetation item, water feature, vehicle, person, or any other object that is not explicitly and unambiguously present in the original base image provided. The base image is the sole and absolute reference for what exists in the scene. Rendering quality is applied only to existing elements — never used as justification to supplement or complete the scene.
@@ -71,10 +64,9 @@ Vegetation is the sole exception to the no-addition rule: landscaping elements s
 Preserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.`;
  
 // ─────────────────────────────────────────────
-// RENDER PROMPTS — todos os blocos por chave
-// CORREÇÃO: Verbos de transformação ("Transform into...") substituídos
-// por verbos de aplicação ("Apply photorealistic rendering to...").
-// Removidas instruções que implicavam criação de elementos não presentes.
+// RENDER PROMPTS
+// Merged: prompts mais detalhados do Doc 4 onde aplicável,
+// estrutura de categorias e validações do Doc 5.
 // ─────────────────────────────────────────────
  
 const RENDER_PROMPTS: Record<string, string> = {
@@ -87,7 +79,8 @@ const RENDER_PROMPTS: Record<string, string> = {
  
   render_aereo: `Apply hyper-photorealistic rendering to the existing full site geometry exactly as modeled, emulating professional cinematic drone photography. STRICTLY preserve 100% of the site layout, roof geometry, landscaping footprint, and all architectural volumes — no alterations. Apply exposure, white balance, and color grading to mimic a high-end drone camera at 80 meters altitude, 45-degree oblique angle, with precise perspective foreshortening and corrected lens distortion. Render only what is present in the original model.`,
  
-  render_detalhe: `Apply hyper-photorealistic rendering to the existing architectural detail geometry exactly as modeled, emulating professional macro architectural photography. STRICTLY preserve 100% of the original geometry of the detail being shown (e.g., material junction, window reveal, structural connection, facade joint, canopy edge) — no modifications to form or proportion. Apply exposure and depth of field to mimic a DSLR camera with an 85mm macro lens at F2.0, with a razor-sharp focus plane precisely on the primary detail. Render only materials and textures onto the existing geometry.`,
+  // Doc 4 version — more precise macro lens spec for detail renders
+  render_detalhe: `Apply hyper-photorealistic rendering to the existing architectural detail geometry exactly as modeled, emulating professional macro architectural photography. STRICTLY preserve 100% of the original geometry of the detail being shown (e.g., material junction, window reveal, structural connection, facade joint, canopy edge) — no modifications to form or proportion. Apply exposure and depth of field to mimic a DSLR camera with an 85mm macro lens at F2.0, with a razor-sharp focus plane precisely on the primary detail surface. Render only materials and textures onto the existing geometry.`,
  
   render_corte: `Apply hyper-photorealistic rendering to the existing architectural section geometry exactly as modeled, emulating a professional cut-through visualization. STRICTLY preserve 100% of the section geometry, floor-to-floor heights, slab thicknesses, wall depths, stair configurations, and spatial relationships between internal environments as drawn. The cut plane MUST remain exactly as defined in the original, with no reinterpretation or closing of any opening created by the section cut. Apply camera simulation to a DSLR positioned perfectly perpendicular to the cut plane, with a true orthographic or near-orthographic perspective, ensuring the full section height is in frame and free of perspective distortion. IMPORTANT: All spaces, rooms, and environments depicted in the section must be faithfully preserved and rendered with photorealistic materials and lighting. The final output must be completely free of any technical annotation, text, dimension lines, section cut symbols, level markers, grid references, or any other documentary graphic element — present only the pure architectural section geometry with photorealistic quality.`,
  
@@ -118,15 +111,12 @@ const RENDER_PROMPTS: Record<string, string> = {
   minimalista: `Final render quality: stripped-back minimalist presentation, existing architecture rendered against a neutral pale or white overcast sky, ground plane in uniform light tone with minimal PBR texture variation, all contextual distraction reduced to near zero, color palette limited to the existing architecture's own material range with no supplementary color. Composition centered with generous negative space, emphasizing the clean lines and geometric forms of the original design. Existing vegetation if present reduced visually to calm, restrained masses with accurate PBR leaf textures and subtle subsurface scattering. Global Illumination (GI) and Physically Based Lighting (PBL) provide even, soft illumination, highlighting the architectural purity of the existing design.`,
  
   // ─── ELEMENTOS DO AMBIENTE ────────────────────────────────────────────────
-  // CORREÇÃO: Todos os blocos agora condicionam suas instruções à presença
-  // dos elementos no modelo original ("if present in the original model",
-  // "existing", "already present"). Blocos não suprimem instruções quando
-  // o elemento não está na imagem — essa responsabilidade é do MERGE_AGENT.
  
   piscina: `For the existing pool present in the original model: apply physically based rendering (PBR) tile or mosaic cladding with subtle grout lines, micro-imperfections, and accurate material reflectivity to the existing pool surfaces. The existing water must be rendered crystal clear, exhibiting physically accurate transparency, refraction, and subsurface scattering for realistic depth, with gentle, natural surface undulation. Simulate dynamic, precise caustics on the existing pool floor and walls. The existing external deck surfaces should be rendered with PBR natural wood or high-quality porcelain tile, showcasing realistic grain, texture, subtle wear, and accurate reflections. Apply photorealistic materials to existing sun loungers, furniture, and umbrella elements already present in the model.`,
  
   jardim: `For the existing garden and vegetation areas present in the original model: apply physically based rendering (PBR) foliage to existing vegetation, showcasing natural, vibrant colors, physically correct leaf textures with subtle imperfections (e.g., veins, slight wilting, dew drops), and accurate natural scale. Simulate advanced subsurface scattering for existing leaves and petals. Ensure natural lighting coherent with the environment, producing realistic, soft-edged shadows cast by existing vegetation. Apply botanical detail and photorealistic organic materials to existing planting elements only.`,
  
+  // Doc 4 version — richer material detail spec
   area_gourmet: `For the existing gourmet area present in the original model: apply ambient string lighting with realistic light falloff and subtle bloom for a warm, inviting atmosphere to existing light fixture locations. Apply physically based rendering (PBR) materials to existing elements — natural wood for existing pergola and furniture with authentic grain and subtle weathering, natural stone or high-quality porcelain to existing countertops with accurate reflectivity and micro-imperfections, brushed stainless steel to existing appliances with anisotropic reflections. Ensure warm and balanced global illumination coherent with a high-end gourmet environment.`,
  
   garagem: `For the existing garage and approach area present in the original model: apply physically based rendering (PBR) floor texture (e.g., concrete, pavers, asphalt) to the existing paved approach with subtle wear, tire marks, and accurate reflectivity. Apply precise PBR material finishes (e.g., brushed metal, textured concrete, natural wood) to the existing architectural car portal detail. If vehicles are already present in the original model, render them with accurate paint reflections, subtle dust, and realistic tire textures. Ensure natural global illumination coherent with the existing facade lighting.`,
@@ -167,13 +157,14 @@ const RENDER_PROMPTS: Record<string, string> = {
   // AMBIENTES INTERNOS — 15 ambientes
   // ─────────────────────────────────────────────
  
-  ambiente_quarto_principal: `For the existing master bedroom present in the original model: camera positioned at 1.0 meter height, slightly below standard eye level, reinforcing the horizontal intimacy of the existing sleeping environment. Focal length equivalent to 24mm to 35mm, wide enough to capture the full existing depth of the room from entry zone to headboard wall. Apply lighting as soft and directional — primary natural light entering from the existing dominant window source, producing a gentle gradient across existing horizontal surfaces. Apply warm secondary contributors at 2700K to existing bedside and ceiling light sources. Atmosphere intimate, calm — no harsh contrast, shadow zones retaining full detail and texture of existing surfaces. Depth of field subtle, existing background elements slightly softened.`,
+  ambiente_quarto_principal: `For the existing master bedroom present in the original model: camera positioned at 1.0 meter height, slightly below standard eye level, reinforcing the horizontal intimacy of the existing sleeping environment. Focal length equivalent to 24mm to 35mm, wide enough to capture the existing full depth of the room from entry zone to headboard wall. Apply lighting as soft and directional — primary natural light entering from the existing dominant window source, producing a gentle gradient across existing horizontal surfaces. Apply warm secondary contributors at 2700K to existing bedside and ceiling light sources. Atmosphere intimate, calm — no harsh contrast, shadow zones retaining full detail and texture of existing surfaces. Depth of field subtle, existing background elements slightly softened.`,
  
   ambiente_quarto_hospedes: `For the existing guest bedroom present in the original model: camera positioned at standard eye level of 1.6 meters, centered on the existing room's primary sleeping axis. Focal length equivalent to 24mm to 28mm, capturing full existing room width and depth in a single frame. Apply clean and neutral lighting — balanced natural light from existing windows providing even ambient illumination, supplemented by existing ceiling fixture at 3000K. Atmosphere fresh, welcoming — soft shadows, moderate contrast, all existing surfaces evenly lit. Depth of field flat, all existing planes from foreground to background in sharp focus, prioritizing spatial legibility.`,
  
   ambiente_banheiro: `For the existing bathroom present in the original model: camera positioned at 1.4 meters height, lens axis horizontal, positioned to capture the existing full vanity and mirror wall as primary focal element with spatial depth extending toward existing shower or bath zone in background. Focal length equivalent to 20mm to 24mm to maximize perceived spatial generosity. Apply high specular accuracy rendering to existing mirror surfaces, existing glazed ceramic and porcelain surfaces, and existing chrome and brushed metal fixtures. Apply primary light rendering at existing overhead downlights at 3000K supplemented by existing vanity mirror lighting at 2700K. Apply steam or moisture atmosphere as subtle humidity haze on existing glass surfaces where contextually appropriate.`,
  
-  ambiente_lavabo: `For the existing powder room present in the original model: camera positioned at 1.2 to 1.4 meters height, tight framing centered on the existing vanity unit and mirror as the singular focal composition. Focal length equivalent to 28mm to 35mm, controlled framing that captures the existing space. Apply dramatic and intentional lighting — accent lighting on existing mirror perimeter, downlight on existing countertop surface, strong specular response on all existing reflective surfaces including mirror, basin, tap fixtures, and wall cladding. Atmosphere sophisticated and moody with higher contrast — deeper shadow zones acceptable and desirable, highlights on existing fixtures and basin intentionally pronounced. Color temperature warm at 2700K to 3000K.`,
+  // Doc 4 version — richer spec with "selective illumination" detail
+  ambiente_lavabo: `For the existing powder room present in the original model: camera positioned at 1.2 to 1.4 meters height, tight framing centered on the existing vanity unit and mirror as the singular focal composition. Focal length equivalent to 28mm to 35mm, controlled framing that captures the existing space. Apply dramatic and intentional lighting — accent lighting on existing mirror perimeter, downlight on existing countertop surface, strong specular response on all existing reflective surfaces including mirror, basin, tap fixtures, and wall cladding. Atmosphere sophisticated and moody with higher contrast — deeper shadow zones acceptable and desirable, highlights on existing fixtures and basin intentionally pronounced. Color temperature warm at 2700K to 3000K. Selective illumination reinforces the premium, intimate character of the existing space.`,
  
   ambiente_sala_estar: `For the existing living room present in the original model: camera positioned at 1.1 to 1.2 meters height, slightly below standard eye level. Focal length equivalent to 24mm to 35mm, wide enough to capture the existing full social zone — existing sofa grouping, coffee table, TV wall or feature wall, and connection to adjacent areas. Apply lighting with multiple simultaneous sources — dominant natural light from existing large window or glazed opening, existing ceiling fixtures at 3000K, existing floor and table lamps at 2700K. Atmosphere relaxed, warm — moderate contrast, rich shadow detail, all existing upholstery and textile surfaces rendered with accurate fabric softness. Depth of field with existing foreground furniture in sharp focus.`,
  
@@ -199,17 +190,53 @@ const RENDER_PROMPTS: Record<string, string> = {
 };
  
 // ─────────────────────────────────────────────
-// PARES INCOMPATÍVEIS — validação no servidor
+// CATEGORIAS — estrutura do Doc 5
+// ─────────────────────────────────────────────
+ 
+const PROMPT_CATEGORIES: Record<string, string[]> = {
+  "TIPO DE RENDER": ["render_externo", "render_interno", "render_aereo", "render_detalhe", "render_corte", "planta_humanizada"],
+  "PERÍODO DO DIA / ILUMINAÇÃO": ["diurno", "entardecer", "noturno", "nublado", "chuva", "amanhecer"],
+  "QUALIDADE / ESTILO DO RENDER": ["fotorrealista", "classico", "atmosferico", "minimalista"],
+  "ELEMENTOS DO AMBIENTE": ["piscina", "jardim", "area_gourmet", "garagem", "deck", "iluminacao_cenica", "nevoa", "espelho_dagua"],
+  "ENTORNO": ["entorno_residencial", "entorno_comercial", "entorno_vegetacao", "entorno_predios", "entorno_casas"],
+  "AMBIENTES INTERNOS": [
+    "ambiente_quarto_principal", "ambiente_quarto_hospedes", "ambiente_banheiro", "ambiente_lavabo",
+    "ambiente_sala_estar", "ambiente_sala_jantar", "ambiente_cozinha", "ambiente_copa",
+    "ambiente_home_theater", "ambiente_escritorio", "ambiente_biblioteca", "ambiente_area_jogos",
+    "ambiente_varanda", "ambiente_terraco", "ambiente_area_servico",
+  ],
+  "CÂMERA / PERSPECTIVA": ["eye_level", "worm_eye", "bird_eye", "dutch_angle", "wide_angle"],
+};
+ 
+const MANDATORY_CATEGORIES = [
+  "TIPO DE RENDER",
+  "PERÍODO DO DIA / ILUMINAÇÃO",
+  "QUALIDADE / ESTILO DO RENDER",
+  "CÂMERA / PERSPECTIVA",
+];
+ 
+const ORDERED_CATEGORIES = [
+  "TIPO DE RENDER",
+  "PERÍODO DO DIA / ILUMINAÇÃO",
+  "QUALIDADE / ESTILO DO RENDER",
+  "ELEMENTOS DO AMBIENTE",
+  "ENTORNO",
+  "AMBIENTES INTERNOS",
+  "CÂMERA / PERSPECTIVA",
+];
+ 
+// ─────────────────────────────────────────────
+// PARES INCOMPATÍVEIS
 // ─────────────────────────────────────────────
  
 const INCOMPATIBLE_PAIRS: [string, string, string][] = [
-  ["bird_eye",   "render_interno",    "Vista aérea (bird_eye) não é compatível com render interno."],
-  ["worm_eye",   "render_interno",    "Vista de verme (worm_eye) não é compatível com render interno."],
-  ["dutch_angle","planta_humanizada", "Ângulo holandês (dutch_angle) não é compatível com planta humanizada."],
-  ["bird_eye",   "planta_humanizada", "Vista aérea (bird_eye) não é compatível com planta humanizada — use a câmera overhead da planta."],
-  ["worm_eye",   "planta_humanizada", "Vista de verme (worm_eye) não é compatível com planta humanizada."],
-  ["worm_eye",   "render_aereo",      "Vista de verme (worm_eye) não é compatível com render aéreo."],
-  ["eye_level",  "render_aereo",      "Nível do olho (eye_level) não é compatível com render aéreo — use bird_eye."],
+  ["bird_eye",    "render_interno",    "Vista aérea (bird_eye) não é compatível com render interno."],
+  ["worm_eye",    "render_interno",    "Vista de verme (worm_eye) não é compatível com render interno."],
+  ["dutch_angle", "planta_humanizada", "Ângulo holandês (dutch_angle) não é compatível com planta humanizada."],
+  ["bird_eye",    "planta_humanizada", "Vista aérea (bird_eye) não é compatível com planta humanizada — use a câmera overhead da planta."],
+  ["worm_eye",    "planta_humanizada", "Vista de verme (worm_eye) não é compatível com planta humanizada."],
+  ["worm_eye",    "render_aereo",      "Vista de verme (worm_eye) não é compatível com render aéreo."],
+  ["eye_level",   "render_aereo",      "Nível do olho (eye_level) não é compatível com render aéreo — use bird_eye."],
 ];
  
 // ─────────────────────────────────────────────
@@ -222,6 +249,21 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
  
+// ─── Fetch with timeout helper ────────────────────────────────────────────────
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 55_000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+ 
 // ─────────────────────────────────────────────
 // HANDLER
 // ─────────────────────────────────────────────
@@ -232,12 +274,6 @@ serve(async (req) => {
   }
  
   try {
-    // Payload esperado do frontend:
-    // {
-    //   imageDescription: string       → saída do analyze-image (FULL_DESCRIPTION ou RENDER_PROMPT_READY)
-    //   selectedKeys: string[]         → ex: ["render_externo", "diurno", "fotorrealista", "eye_level"]
-    //   humanizationText?: string      → opcional, descrição de pessoas/animais
-    // }
     const { imageDescription, selectedKeys, humanizationText } = await req.json();
  
     // ── Validação: imageDescription ───────────────────────────────────────
@@ -254,6 +290,30 @@ serve(async (req) => {
         JSON.stringify({ error: "selectedKeys deve ser um array com ao menos uma chave válida." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+ 
+    // ── Validação: categorias obrigatórias presentes ──────────────────────
+    for (const category of MANDATORY_CATEGORIES) {
+      const hasSelection = PROMPT_CATEGORIES[category].some((key) => selectedKeys.includes(key));
+      if (!hasSelection) {
+        return new Response(
+          JSON.stringify({ error: `É obrigatório selecionar ao menos uma opção da categoria: ${category}.` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+ 
+    // ── Validação: máximo de 1 seleção por categoria obrigatória ──────────
+    for (const category of MANDATORY_CATEGORIES) {
+      const selectedInCategory = PROMPT_CATEGORIES[category].filter((key) => selectedKeys.includes(key));
+      if (selectedInCategory.length > 1) {
+        return new Response(
+          JSON.stringify({
+            error: `Apenas uma opção pode ser selecionada para a categoria: ${category}. Selecionadas: ${selectedInCategory.join(", ")}`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
  
     // ── Validação: pares incompatíveis ────────────────────────────────────
@@ -277,34 +337,45 @@ serve(async (req) => {
       );
     }
  
-    // ── Resolve as chaves para os blocos de texto ─────────────────────────
+    // ── Resolve e ordena os blocos hierarquicamente ───────────────────────
     const resolvedBlocks: string[] = [];
     const unknownKeys: string[] = [];
     const emptyAmbienteKeys: string[] = [];
  
+    const selectedBlocksByCategory: Record<string, string[]> = {};
+    for (const category of ORDERED_CATEGORIES) {
+      selectedBlocksByCategory[category] = [];
+    }
+ 
     for (const key of selectedKeys) {
-      if (key in RENDER_PROMPTS) {
-        const blockText = RENDER_PROMPTS[key].trim();
- 
-        // Ambiente interno sem prompt ainda — avisa mas não bloqueia
-        if (key.startsWith("ambiente_") && blockText === "") {
-          emptyAmbienteKeys.push(key);
-          continue;
+      let foundCategory = false;
+      for (const category of ORDERED_CATEGORIES) {
+        if (PROMPT_CATEGORIES[category].includes(key)) {
+          const blockText = RENDER_PROMPTS[key]?.trim() ?? "";
+          if (blockText === "") {
+            emptyAmbienteKeys.push(key);
+          } else {
+            selectedBlocksByCategory[category].push(`[${key.toUpperCase()}]\n${blockText}`);
+          }
+          foundCategory = true;
+          break;
         }
- 
-        // Ignora qualquer outro bloco vazio silenciosamente
-        if (blockText === "") continue;
- 
-        resolvedBlocks.push(`[${key.toUpperCase()}]\n${blockText}`);
-      } else {
+      }
+      if (!foundCategory) {
         unknownKeys.push(key);
+      }
+    }
+ 
+    for (const category of ORDERED_CATEGORIES) {
+      if (selectedBlocksByCategory[category].length > 0) {
+        resolvedBlocks.push(...selectedBlocksByCategory[category]);
       }
     }
  
     if (resolvedBlocks.length === 0) {
       return new Response(
         JSON.stringify({
-          error: `Nenhum bloco com conteúdo encontrado. Chaves inválidas: ${unknownKeys.join(", ")}${emptyAmbienteKeys.length > 0 ? `. Ambientes sem prompt configurado: ${emptyAmbienteKeys.join(", ")}` : ""}`,
+          error: `Nenhum bloco com conteúdo válido encontrado. Chaves inválidas: ${unknownKeys.join(", ")}${emptyAmbienteKeys.length > 0 ? `. Ambientes sem prompt configurado: ${emptyAmbienteKeys.join(", ")}` : ""}`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -318,7 +389,7 @@ serve(async (req) => {
     const API_MODEL =
       Deno.env.get("COMET_MODEL") ||
       Deno.env.get("OPENAI_MODEL") ||
-      "gpt-4o-mini";
+      "gpt-4o"; // gpt-4o — mais capaz para merge complexo
     const API_BASE_URL =
       Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
  
@@ -333,11 +404,7 @@ serve(async (req) => {
     }
  
     // ── Monta system e user message ───────────────────────────────────────
-    // CORREÇÃO: A instrução de fidelidade geométrica é repetida explicitamente
-    // na user message, ancorando o modelo na imageDescription como única
-    // fonte de verdade para o que existe na cena.
     const systemContent = [SYSTEM_PERSONA, MASTER_MERGE_PROMPT, MERGE_AGENT].join("\n\n");
- 
     const selectedBlocksText = resolvedBlocks.join("\n\n");
  
     const userMessage =
@@ -347,22 +414,25 @@ serve(async (req) => {
       `OPTIONAL_PEOPLE_ANIMALS (add only if described — do not invent):\n${humanizationText?.trim() || "(none)"}\n\n` +
       `Generate the merged prompt now. The output must repeatedly reinforce fidelity to the existing geometry. Return only the final merged prompt text, no explanations, no preamble.`;
  
-    // ── Chamada à API ─────────────────────────────────────────────────────
-    const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: API_MODEL,
-        max_tokens: 3000,
-        messages: [
-          { role: "system", content: systemContent },
-          { role: "user",   content: userMessage },
-        ],
-      }),
-    });
+    // ── Chamada à API com timeout ─────────────────────────────────────────
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/v1/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: API_MODEL,
+          max_tokens: 3000,
+          messages: [
+            { role: "system", content: systemContent },
+            { role: "user",   content: userMessage },
+          ],
+        }),
+      }
+    );
  
     if (!response.ok) {
       const status = response.status;
@@ -381,7 +451,7 @@ serve(async (req) => {
         );
       }
  
-      const errorText = await response.text();
+      const errorText = await response.text().catch(() => "");
       console.error("API error:", status, errorText);
       throw new Error(`API error: ${status}`);
     }
@@ -393,18 +463,25 @@ serve(async (req) => {
       throw new Error("O modelo retornou uma resposta vazia.");
     }
  
-    // ── Prompt final = mesclagem da IA + SUFFIX + NEGATIVE_PROMPT ─────────
+    // ── Prompt final = merge da IA + SUFFIX + NEGATIVE_PROMPT ─────────────
     const finalPrompt = [mergedPrompt, SUFFIX, NEGATIVE_PROMPT]
       .filter(Boolean)
       .join("\n\n");
  
     // ── Resposta ──────────────────────────────────────────────────────────
+    const usedKeys = selectedKeys.filter((k) => {
+      for (const category of ORDERED_CATEGORIES) {
+        if (PROMPT_CATEGORIES[category].includes(k) && (RENDER_PROMPTS[k]?.trim() ?? "") !== "") {
+          return true;
+        }
+      }
+      return false;
+    });
+ 
     return new Response(
       JSON.stringify({
         prompt: finalPrompt,
-        usedKeys: selectedKeys.filter(
-          (k) => k in RENDER_PROMPTS && RENDER_PROMPTS[k].trim() !== ""
-        ),
+        usedKeys,
         ...(unknownKeys.length > 0 && { ignoredKeys: unknownKeys }),
         ...(emptyAmbienteKeys.length > 0 && { pendingAmbientes: emptyAmbienteKeys }),
       }),
@@ -415,12 +492,9 @@ serve(async (req) => {
     console.error("generate-prompt error:", e);
     return new Response(
       JSON.stringify({
-        error: e instanceof Error ? e.message : "Erro ao gerar prompt",
+        error: e instanceof Error ? e.message : "Erro interno ao gerar prompt",
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
