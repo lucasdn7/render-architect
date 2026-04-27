@@ -131,14 +131,18 @@ export async function generateFinalPrompt(
     : [];
 
   const wordCount = prompt.trim().split(/\s+/).filter(Boolean).length;
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30); // 30 dias de retenção
+
   const { data: historyRow, error: insertError } = await supabase
     .from("prompt_history")
     .insert({
       user_id: historyContext?.userId,
       prompt,
       image_preview: historyContext?.imagePreview || null,
-      render_config: historyContext?.renderConfig ?? {},
+      render_config: (historyContext?.renderConfig ?? {}) as unknown as import("@/integrations/supabase/types").Json,
       word_count: wordCount,
+      expires_at: expiresAt.toISOString(),
     })
     .select("id")
     .maybeSingle();

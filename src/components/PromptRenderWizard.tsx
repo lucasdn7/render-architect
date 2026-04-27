@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Upload, X, Image as ImageIcon, Home, LampDesk, Plane, ZoomIn, Scissors, LayoutGrid, Sun, Sunset, Moon, Cloud, CloudRain, Sunrise, Sparkles, Columns3, Camera, Users, PawPrint, Plus, Copy, RotateCcw } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Home, LampDesk, Plane, ZoomIn, Scissors, LayoutGrid, Sun, Sunset, Moon, Cloud, CloudRain, Sunrise, Sparkles, Columns3, Camera, Users, PawPrint, Plus, Copy, RotateCcw, Heart, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { analyzeImage } from "@/services/aiService";
 import { ImageAnalysis } from "@/types/promptRender";
@@ -530,10 +530,10 @@ export default function PromptRenderWizard() {
     // 0: upload obrigatório
     if (state.stepIndex === 0) return Boolean(state.imagePreview);
 
-    // 1: descrição obrigatória
-    if (state.stepIndex === 1) return state.sceneDescription.trim().length > 0;
+    // 1: descrição opcional (pode avançar vazio)
+    if (state.stepIndex === 1) return true;
 
-    // 2: tipo render obrigatório
+    // 2: tipo de render obrigatório
     if (state.stepIndex === 2) return Boolean(state.renderType);
 
     // 3: iluminação obrigatória
@@ -542,33 +542,23 @@ export default function PromptRenderWizard() {
     // 4: qualidade obrigatória
     if (state.stepIndex === 4) return Boolean(state.quality);
 
-    // 5: elementos (opcional)
+    // 5: elementos do ambiente OPCIONAL (pode pular sem escolher)
     if (state.stepIndex === 5) return true;
 
-    // 6: entorno (obrigatório se página estiver ativa)
-    if (state.stepIndex === 6) {
-      const pageDisabled = state.renderType === "render_interno" && !hasExteriorView;
-      if (pageDisabled) return true;
-      return state.surroundings.length > 0;
-    }
+    // 6: entorno OPCIONAL (pode pular sem escolher)
+    if (state.stepIndex === 6) return true;
 
-    // 7: câmera obrigatório
-    if (state.stepIndex === 7) return Boolean(state.camera);
+    // 7: câmera OPCIONAL (pode pular sem escolher)
+    if (state.stepIndex === 7) return true;
 
-    // 8: ambientes internos (se existir)
-    if (state.stepIndex === 8 && state.renderType === "render_interno") {
-      return state.internalRooms.length > 0;
-    }
+    // 8: ambientes internos OPCIONAL (pode pular sem escolher, mesmo se render interno)
+    if (state.stepIndex === 8) return true;
 
-    // humanização
-    const humanizationStepIndex = state.renderType === "render_interno" ? 9 : 8;
-    if (state.stepIndex === humanizationStepIndex) {
-      // sempre pode avançar (se não, vai direto; se sim, formulário é opcional)
-      return true;
-    }
+    // 9: humanização opcional (pode avançar sem preencher)
+    if (state.stepIndex === 9) return true;
 
     return true;
-  }, [hasExteriorView, state]);
+  }, [state]);
 
   const nextStepIndex = useMemo(() => {
     // step order:
@@ -630,6 +620,34 @@ export default function PromptRenderWizard() {
           const prompt = data?.prompt;
           if (!prompt || typeof prompt !== "string") {
             throw new Error("Erro ao gerar prompt final. Tente novamente.");
+          }
+
+          // Salva no histórico com retenção de 30 dias
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30);
+
+            await supabase.from("prompt_history").insert({
+              user_id: userData?.user?.id || null,
+              prompt,
+              image_preview: state.imagePreview,
+              render_config: {
+                renderType: state.renderType,
+                lighting: state.lighting,
+                quality: state.quality,
+                environmentElements: state.environmentElements,
+                surroundings: state.surroundings,
+                camera: state.camera,
+                internalRooms: state.internalRooms,
+                humanizationEnabled: state.humanizationEnabled,
+              } as unknown as import("@/integrations/supabase/types").Json,
+              word_count: prompt.trim().split(/\s+/).filter(Boolean).length,
+              expires_at: expiresAt.toISOString(),
+            });
+          } catch (histErr) {
+            console.error("Erro ao salvar no histórico:", histErr);
+            // Não impede o fluxo se falhar ao salvar no histórico
           }
 
           update({ finalPrompt: prompt });
@@ -1254,6 +1272,38 @@ export default function PromptRenderWizard() {
 
             <button
               type="button"
+              onClick={() => {
+                const blob = new Blob([state.finalPrompt], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `prompt-render-${new Date().toISOString().slice(0, 10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                toast.success("Prompt exportado como .txt");
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-mono text-sm font-medium border transition-all duration-200 active:scale-[0.97]"
+              style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
+            >
+              <Download className="w-4 h-4" />
+              Exportar .txt
+            </button>
+
+            <FavoriteButton promptText={state.finalPrompt} renderConfig={{
+              renderType: state.renderType,
+              lighting: state.lighting,
+              quality: state.quality,
+              environmentElements: state.environmentElements,
+              surroundings: state.surroundings,
+              camera: state.camera,
+              internalRooms: state.internalRooms,
+              humanizationEnabled: state.humanizationEnabled,
+            }} />
+
+            <button
+              type="button"
               onClick={reset}
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-mono text-sm font-medium border transition-all duration-200 active:scale-[0.97]"
               style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
@@ -1296,6 +1346,89 @@ export default function PromptRenderWizard() {
 
       {renderStep()}
     </div>
+  );
+}
+
+function FavoriteButton({
+  promptText,
+  renderConfig,
+}: {
+  promptText: string;
+  renderConfig: {
+    renderType: string;
+    lighting: string;
+    quality: string;
+    environmentElements: string[];
+    surroundings: string[];
+    camera: string;
+    internalRooms: string[];
+    humanizationEnabled: boolean;
+  };
+}) {
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Verifica se já está favoritado ao montar
+  useEffect(() => {
+    try {
+      const favorites = JSON.parse(localStorage.getItem("favorite_prompts") || "[]");
+      const alreadyFavorited = favorites.some((f: { prompt: string }) => f.prompt === promptText);
+      setIsFavorited(alreadyFavorited);
+    } catch {
+      // ignore
+    }
+  }, [promptText]);
+
+  const handleFavorite = async () => {
+    if (isFavorited || isLoading) return;
+
+    try {
+      setIsLoading(true);
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        toast.error("Você precisa estar logado para favoritar prompts.");
+        return;
+      }
+
+      // Salva no localStorage (temporário até criar tabela no banco)
+      const favorites = JSON.parse(localStorage.getItem("favorite_prompts") || "[]");
+      const newFavorite = {
+        id: crypto.randomUUID(),
+        user_id: userData.user.id,
+        prompt: promptText,
+        render_config: renderConfig,
+        created_at: new Date().toISOString(),
+      };
+      favorites.push(newFavorite);
+      localStorage.setItem("favorite_prompts", JSON.stringify(favorites));
+
+      toast.success("Prompt favoritado com sucesso!");
+      setIsFavorited(true);
+    } catch (err) {
+      toast.error("Erro ao favoritar prompt. Tente novamente.");
+      console.error("Favorite error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleFavorite}
+      disabled={isFavorited || isLoading}
+      className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-mono text-sm font-medium border transition-all duration-200 active:scale-[0.97] ${
+        isFavorited ? "opacity-60 cursor-not-allowed" : ""
+      }`}
+      style={{
+        borderColor: isFavorited ? "hsl(var(--gold))" : "hsl(var(--border))",
+        color: isFavorited ? "hsl(var(--gold))" : "hsl(var(--foreground))",
+      }}
+    >
+      <Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />
+      {isFavorited ? "Favoritado" : "Favoritar"}
+    </button>
   );
 }
 
