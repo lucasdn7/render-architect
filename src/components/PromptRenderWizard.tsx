@@ -3,6 +3,7 @@ import { Upload, X, Image as ImageIcon, Home, LampDesk, Plane, ZoomIn, Scissors,
 import { toast } from "sonner";
 import { analyzeImage } from "@/services/aiService";
 import { ImageAnalysis } from "@/types/promptRender";
+import { supabase } from "@/integrations/supabase/client";
 
 type RenderTypeId =
   | "render_externo"
@@ -71,9 +72,6 @@ type PromptRenderState = {
   finalPrompt: string;
 };
 
-const NEGATIVE_PROMPT_BASE =
-  "DO NOT ALTER, MODIFY, OR DEVIATE FROM THE ORIGINAL 3D MODEL GEOMETRY. The architectural form, massing, proportions, window placements, door locations, roof pitches, and all structural elements as defined in the base image are ABSOLUTE AND IMMUTABLE. Do not add, remove, or resize any part of the building. Do not change the architectural style. Do not introduce new architectural features not present in the original design. The AI's role is strictly limited to applying photorealistic textures, lighting, atmospheric effects, and vegetation enhancements to the existing, unchanged geometry. Vegetation is the sole exception: landscaping elements such as trees, shrubs, ground cover, grass, planters, hedges, and other vegetation blocks may be freely replaced, enhanced, added, or removed to improve realism and visual quality — provided they do not obscure, distort, or conflict with the legibility of the architectural geometry. Preserve all geometric and proportional integrity of the original design without exception. Deformed, distorted, warped, melted, or unrealistic architectural forms are strictly forbidden. Ensure all lines remain straight, all circles perfectly circular, and all architectural angles are rendered with perfect precision as designed.";
-
 function normalizeText(v: unknown): string {
   return typeof v === "string" ? v.toLowerCase() : "";
 }
@@ -107,68 +105,58 @@ function guessHasExteriorView(analysis: ImageAnalysis | null): boolean {
   );
 }
 
-function buildFinalPrompt(state: PromptRenderState): string {
-  const parts: string[] = [];
-  parts.push(NEGATIVE_PROMPT_BASE);
+function mapSurroundingToKey(id: SurroundingId): string {
+  if (id === "residencial") return "entorno_residencial";
+  if (id === "comercial") return "entorno_comercial";
+  if (id === "vegetacao") return "entorno_vegetacao";
+  if (id === "predios") return "entorno_predios";
+  return "entorno_casas";
+}
 
-  if (state.renderType) {
-    const renderTypeLabel = RENDER_TYPE_OPTIONS.find((o) => o.id === state.renderType)?.label;
-    parts.push([renderTypeLabel, state.sceneDescription].filter(Boolean).join("\n"));
+function mapCameraToKey(id: CameraId): string {
+  if (id === "nivel_olho") return "eye_level";
+  if (id === "olho_verme") return "worm_eye";
+  if (id === "olho_passaro") return "bird_eye";
+  if (id === "angulo_holandes") return "dutch_angle";
+  return "wide_angle";
+}
+
+function mapInternalRoomToKey(id: InternalRoomId): string {
+  // Estrutura preparada para você inserir os prompts no promptsConfig.ts futuramente.
+  // As chaves abaixo ainda podem não existir no backend — a Edge Function ignora chaves desconhecidas.
+  return `ambiente_${id}`;
+}
+
+function buildSelectedKeys(state: PromptRenderState): string[] {
+  const keys: string[] = [];
+
+  if (state.renderType) keys.push(state.renderType);
+  if (state.lighting) keys.push(state.lighting);
+  if (state.quality) keys.push(state.quality);
+
+  for (const env of state.environmentElements) keys.push(env);
+  for (const s of state.surroundings) keys.push(mapSurroundingToKey(s));
+  if (state.camera) keys.push(mapCameraToKey(state.camera));
+
+  if (state.renderType === "render_interno") {
+    for (const r of state.internalRooms) keys.push(mapInternalRoomToKey(r));
   }
 
-  if (state.lighting) {
-    parts.push(LIGHTING_OPTIONS.find((o) => o.id === state.lighting)?.label || "");
-  }
+  return keys;
+}
 
-  if (state.quality) {
-    parts.push(QUALITY_OPTIONS.find((o) => o.id === state.quality)?.label || "");
-  }
+function buildHumanizationText(state: PromptRenderState): string {
+  if (!state.humanizationEnabled) return "";
+  if (state.humanizationItems.length === 0) return "";
 
-  if (state.environmentElements.length > 0) {
-    parts.push(
-      state.environmentElements
-        .map((id) => ENVIRONMENT_ELEMENTS.find((o) => o.id === id)?.label)
-        .filter(Boolean)
-        .join("\n")
-    );
-  }
-
-  if (state.surroundings.length > 0) {
-    parts.push(
-      state.surroundings
-        .map((id) => SURROUNDING_OPTIONS.find((o) => o.id === id)?.label)
-        .filter(Boolean)
-        .join("\n")
-    );
-  }
-
-  if (state.camera) {
-    parts.push(CAMERA_OPTIONS.find((o) => o.id === state.camera)?.label || "");
-  }
-
-  if (state.renderType === "render_interno" && state.internalRooms.length > 0) {
-    parts.push(
-      state.internalRooms
-        .map((id) => INTERNAL_ROOMS.find((o) => o.id === id)?.label)
-        .filter(Boolean)
-        .join("\n")
-    );
-  }
-
-  if (state.humanizationEnabled && state.humanizationItems.length > 0) {
-    parts.push(
-      state.humanizationItems
-        .map((item) => {
-          const p1 = `${item.type}: ${item.physicalDescription}`.trim();
-          const p2 = item.actionPosition ? `Ação / Posição: ${item.actionPosition}` : "";
-          return [p1, p2].filter(Boolean).join("\n");
-        })
-        .filter(Boolean)
-        .join("\n\n")
-    );
-  }
-
-  return parts.filter((p) => p && p.trim().length > 0).join("\n\n");
+  return state.humanizationItems
+    .map((item) => {
+      const p1 = `${item.type}: ${item.physicalDescription}`.trim();
+      const p2 = item.actionPosition ? `Ação / Posição: ${item.actionPosition}` : "";
+      return [p1, p2].filter(Boolean).join("\n");
+    })
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 type Option<T extends string> = {
@@ -429,6 +417,7 @@ export default function PromptRenderWizard() {
   });
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const sceneDescriptionTouchedRef = useRef(false);
 
   const update = useCallback((partial: Partial<PromptRenderState>) => {
@@ -616,9 +605,42 @@ export default function PromptRenderWizard() {
     const finalStepIndex = state.renderType === "render_interno" ? 10 : 9;
 
     if (state.stepIndex === humanizationStepIndex) {
-      const prompt = buildFinalPrompt(state);
-      update({ finalPrompt: prompt });
-      goToStep(finalStepIndex);
+      void (async () => {
+        try {
+          setIsGeneratingPrompt(true);
+          const selectedKeys = buildSelectedKeys(state);
+          const humanizationText = buildHumanizationText(state);
+
+          const { data, error } = await supabase.functions.invoke("generate-prompt", {
+            body: {
+              imageDescription: state.sceneDescription,
+              selectedKeys,
+              humanizationText,
+            },
+          });
+
+          if (error) {
+            throw error;
+          }
+
+          if (data?.error) {
+            throw new Error(data.error);
+          }
+
+          const prompt = data?.prompt;
+          if (!prompt || typeof prompt !== "string") {
+            throw new Error("Erro ao gerar prompt final. Tente novamente.");
+          }
+
+          update({ finalPrompt: prompt });
+          goToStep(finalStepIndex);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Erro ao gerar prompt final.";
+          toast.error(msg);
+        } finally {
+          setIsGeneratingPrompt(false);
+        }
+      })();
       return;
     }
 
@@ -1193,7 +1215,7 @@ export default function PromptRenderWizard() {
           <NavButtons
             onBack={handleBack}
             onNext={handleNext}
-            nextDisabled={!canGoNext}
+            nextDisabled={!canGoNext || isGeneratingPrompt}
             nextLabel={state.humanizationEnabled ? "Gerar prompt" : "Gerar prompt"}
           />
         </div>
