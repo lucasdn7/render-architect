@@ -353,15 +353,50 @@ Final expected result: an image indistinguishable from a real photograph, mainta
   may converge or diverge — **correct with tilt-shift simulation for formal presentation**, or retain for dynamic editorial effect. This 
   angle is ideal for communicating spatial generosity, site context, and architectural scale in a single image. **Physically Based Camera 
   (PBC)** model ensures accurate depth of field, motion blur (if applicable), and lens characteristics.`,
- 
+
+  // ─────────────────────────────────────────────
+  // AMBIENTES INTERNOS (14 ambientes)
+  // ─────────────────────────────────────────────
+  // COLE SEUS PROMPTS ABAIXO — cada chave deve começar com "ambiente_"
+
+  ambiente_quarto_principal: ``,
+
+  ambiente_quarto_hospedes: ``,
+
+  ambiente_banheiro: ``,
+
+  ambiente_lavabo: ``,
+
+  ambiente_sala_estar: ``,
+
+  ambiente_sala_jantar: ``,
+
+  ambiente_cozinha: ``,
+
+  ambiente_copa: ``,
+
+  ambiente_home_theater: ``,
+
+  ambiente_escritorio: ``,
+
+  ambiente_biblioteca: ``,
+
+  ambiente_area_jogos: ``,
+
+  ambiente_varanda: ``,
+
+  ambiente_terraco: ``,
+
+  ambiente_area_servico: ``,
+
   // ─────────────────────────────────────────────
   // SUFIXO TÉCNICO UNIVERSAL
   // ─────────────────────────────────────────────
- 
+
   suffix: SUFFIX
- 
+
 }
- 
+
 // ─────────────────────────────────────────────
 // MAPEAMENTO: combinações render + iluminação
 // Usado internamente para selecionar o prompt correto
