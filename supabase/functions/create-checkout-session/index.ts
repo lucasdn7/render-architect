@@ -54,7 +54,7 @@ serve(async (req) => {
       throw new Error("Usuário não autenticado. Faça login novamente.");
     }
 
-    const { productCode, mode, successUrl, cancelUrl } = await req.json();
+    const { productCode, mode, successUrl, cancelUrl } = body;
 
     if (!productCode || !mode || !successUrl || !cancelUrl) {
       throw new Error("Payload inválido: productCode, mode, successUrl e cancelUrl são obrigatórios");
