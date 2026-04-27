@@ -2,7 +2,7 @@
 // This file runs in Deno environment on Supabase Edge Functions
 // TypeScript errors are expected in local IDE due to Deno-specific APIs
  
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
  
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +43,7 @@ Definitions:
  
 Return ONLY the category string. No extra text, no punctuation.`;
  
-// ─── 3D / Photo / Sketch / Detail / Mixed analysis prompt ───────────────────
+// ─── 3D / Photo / Mixed analysis prompt ──────────────────────────────────────
 const PROMPT_3D = `As a forensic architectural analyst with 30 years of experience, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural image. Return ONLY a valid JSON object with these fields:
  
 {
@@ -79,8 +79,8 @@ const PROMPT_3D = `As a forensic architectural analyst with 30 years of experien
   "DAMAGES_IMPERFECTIONS": "flaws, defects, deterioration, stains, cracks, chips, fading",
   "TEMPORAL_INDICATORS": "clues about time period — style era, construction date indicators",
   "SCALE_REFERENCES": "scale indicators — human figures, vehicles, furniture, standard objects",
-  "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15–20 lines) capturing EVERY nuance — overall impression, massing, proportions, material relationships, spatial qualities, light behavior, atmosphere, and ALL distinguishing characteristics.",
-  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3–5 lines, capturing style, materials, lighting, atmosphere, camera angle, and all key architectural features. This field should be directly usable as input for an AI image generator."
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15-20 lines) capturing EVERY nuance — overall impression, massing, proportions, material relationships, spatial qualities, light behavior, atmosphere, and ALL distinguishing characteristics.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing style, materials, lighting, atmosphere, camera angle, and all key architectural features. This field should be directly usable as input for an AI image generator."
 }
  
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
@@ -126,7 +126,7 @@ const PROMPT_FLOOR_PLAN = `You are reading a 2D architectural floor plan. Conduc
       "notes": "any special feature — corner window, floor-to-ceiling, etc."
     }
   ],
-  "FURNITURE_INVENTORY": "COMPLETE list of ALL furniture blocks visible — specify room, piece type, approximate size, arrangement (e.g.: 'Living room: 3-seat sofa + 2-seat sofa + coffee table + TV unit; Bedroom 1: queen bed with 2 nightstands + wardrobe')",
+  "FURNITURE_INVENTORY": "COMPLETE list of ALL furniture blocks visible — specify room, piece type, approximate size, arrangement (e.g.: Living room: 3-seat sofa + 2-seat sofa + coffee table + TV unit; Bedroom 1: queen bed with 2 nightstands + wardrobe)",
   "KITCHEN_DETAILS": "kitchen layout type (L/U/galley/island/peninsula), all visible appliances and fixtures — cooktop (number of burners), oven, refrigerator, sink, dishwasher, island dimensions, counter runs",
   "BATHROOM_DETAILS": "for EACH bathroom — fixtures present (toilet, bidet, bathtub, shower, sink count, vanity), layout, approximate dimensions",
   "SERVICE_AREAS": "laundry room, utility room, storage — equipment visible (washing machine, dryer, water heater, storage shelves), dimensions",
@@ -141,8 +141,8 @@ const PROMPT_FLOOR_PLAN = `You are reading a 2D architectural floor plan. Conduc
   "HATCHING_MATERIALS": "interpretation of all hatching patterns used — what material each pattern represents (concrete, brick, insulation, wood, stone, etc.)",
   "TITLE_BLOCK": "any title block information — project name, architect, date, scale, revision, drawing number",
   "NOTES_LEGENDS": "any written notes, legends, symbols explanations, or specifications visible in the drawing",
-  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A comprehensive narrative (15–20 lines) that reads the floor plan as an experienced architect would — describing the overall spatial concept, room distribution, circulation logic, indoor-outdoor relationships, functional zoning, notable design decisions, and every key element visible. Describe it with enough detail that a contractor or renderer could fully understand the layout without seeing the drawing.",
-  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this floor plan analysis, written in English, optimized for photorealistic architectural rendering of the interior spaces described, 3–5 lines, capturing spatial layout, materials, lighting potential, atmosphere, and key architectural features."
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A comprehensive narrative (15-20 lines) that reads the floor plan as an experienced architect would — describing the overall spatial concept, room distribution, circulation logic, indoor-outdoor relationships, functional zoning, notable design decisions, and every key element visible. Describe it with enough detail that a contractor or renderer could fully understand the layout without seeing the drawing.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this floor plan analysis, written in English, optimized for photorealistic architectural rendering of the interior spaces described, 3-5 lines, capturing spatial layout, materials, lighting potential, atmosphere, and key architectural features."
 }
  
 CRITICAL INSTRUCTIONS:
@@ -186,8 +186,8 @@ const PROMPT_SECTION = `You are reading a 2D architectural section drawing. Cond
   "DIMENSIONS_ANNOTATIONS": "ALL dimension strings exactly as written — vertical and horizontal",
   "MATERIALS_HATCHING": "interpretation of every hatching pattern in section — concrete (solid fill), insulation (zigzag), timber (grain lines), brick (running bond), etc.",
   "GRADE_LEVELS": "existing and finished ground levels shown, retaining walls, steps at entry",
-  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15–20 lines) reading the section as an architect — describing the spatial sequence cut through, structural logic, floor-to-floor heights, material layering, vertical relationships between spaces, and all key technical details visible.",
-  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this section analysis, written in English, optimized for photorealistic architectural rendering, 3–5 lines, capturing the spatial section view, structural materials, lighting conditions, and architectural atmosphere."
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading the section as an architect — describing the spatial sequence cut through, structural logic, floor-to-floor heights, material layering, vertical relationships between spaces, and all key technical details visible.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this section analysis, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing the spatial section view, structural materials, lighting conditions, and architectural atmosphere."
 }
  
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
@@ -235,8 +235,8 @@ const PROMPT_ELEVATION = `You are reading a 2D architectural elevation drawing. 
   "MATERIAL_LEGENDS": "any material key, legend, or annotation list provided",
   "LEVEL_MARKERS": "all level/datum annotations — finished floor levels, finished ground level, top of parapet, ridge",
   "GRID_LINES": "structural grid lines shown on elevation — labels and spacing",
-  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15–20 lines) reading the elevation as an architect — describing the overall facade composition, material palette, fenestration strategy, proportional system, architectural character, and every notable feature visible from this face of the building.",
-  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this elevation analysis, written in English, optimized for photorealistic architectural rendering of this facade, 3–5 lines, capturing facade materials, fenestration, architectural style, lighting angle, and atmosphere."
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading the elevation as an architect — describing the overall facade composition, material palette, fenestration strategy, proportional system, architectural character, and every notable feature visible from this face of the building.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this elevation analysis, written in English, optimized for photorealistic architectural rendering of this facade, 3-5 lines, capturing facade materials, fenestration, architectural style, lighting angle, and atmosphere."
 }
  
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
@@ -265,8 +265,92 @@ const PROMPT_SITE_PLAN = `You are reading a 2D architectural site plan. Conduct 
   "UTILITIES": "utility connections visible — water, sewer, electrical entry points",
   "FENCING_WALLS": "boundary treatment — fence type, wall material, height if annotated, gate positions",
   "DIMENSIONS_ANNOTATIONS": "ALL dimension strings exactly as written",
-  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15–20 lines) reading the site plan as a landscape architect — describing the lot geometry, building placement strategy, outdoor space hierarchy, circulation, landscaping concept, and all key site elements.",
-  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this site plan analysis, written in English, optimized for photorealistic architectural aerial or bird's-eye rendering, 3–5 lines, capturing site layout, landscaping, materials, lighting, and surrounding context."
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading the site plan as a landscape architect — describing the lot geometry, building placement strategy, outdoor space hierarchy, circulation, landscaping concept, and all key site elements.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this site plan analysis, written in English, optimized for photorealistic architectural aerial or bird's-eye rendering, 3-5 lines, capturing site layout, landscaping, materials, lighting, and surrounding context."
+}
+ 
+CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
+ 
+// ─── Axonometric analysis prompt (from Doc 3) ─────────────────────────────────
+const PROMPT_AXONOMETRIC = `As a forensic architectural analyst, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural axonometric drawing. Focus on the spatial relationships, structural elements, and material indications without perspective distortion. Return ONLY a valid JSON object with these fields:
+ 
+{
+  "IMAGE_TYPE": "Axonometric — specify isometric, dimetric, or trimetric",
+  "OVERALL_COMPOSITION": "description of the main architectural elements and their arrangement in the axonometric view",
+  "STRUCTURAL_SYSTEM": "visible structural elements — columns, beams, slabs, walls, roof structure, and their connections",
+  "FACADE_ELEMENTS": "cladding materials, fenestration patterns, openings, and any projecting or recessed elements",
+  "ROOF_DETAILS": "roof form, materials, and any visible roof-mounted equipment or features",
+  "LEVELS_AND_FLOORS": "number of levels, their heights, and how they relate spatially",
+  "INTERNAL_SPACES": "visible internal spaces, their functions, and how they connect or overlap",
+  "MATERIALS": "granular material list with exact specifications as indicated by hatching or annotations",
+  "DETAILS": "any visible architectural details, joints, or connections",
+  "CONTEXT": "any surrounding context shown, such as site elements or adjacent buildings",
+  "LIGHTING_AND_SHADOWS": "direction of light, cast shadows, and how they define form and depth",
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15-20 lines) capturing EVERY nuance — overall impression, massing, proportions, material relationships, spatial qualities, light behavior, atmosphere, and ALL distinguishing characteristics of the axonometric view.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing style, materials, lighting, atmosphere, camera angle, and all key architectural features in an axonometric style."
+}
+ 
+CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
+ 
+// ─── Detail Drawing analysis prompt (from Doc 3, enhanced) ───────────────────
+const PROMPT_DETAIL_DRAWING = `You are reading a 2D architectural detail drawing or construction node. Conduct a COMPREHENSIVE and EXHAUSTIVE analysis extracting every piece of information visible. Focus on materials, connections, dimensions, and construction methods. Return ONLY a valid JSON object:
+ 
+{
+  "IMAGE_TYPE": "Detail Drawing — specify type (wall node, roof edge, window jamb/head/sill, connection, junction, floor build-up, etc.)",
+  "DRAWING_SCALE": "scale indicated or estimated (detail drawings are typically 1:5, 1:10, 1:20)",
+  "DETAIL_LOCATION": "where in the building this detail occurs — e.g., external wall base, roof parapet, window head, floor-to-wall junction",
+  "COMPONENTS_INVENTORY": [
+    {
+      "name": "component label or inferred function",
+      "material": "exact material specification",
+      "dimensions": "width x height x depth if readable",
+      "connection_method": "how it connects to adjacent components",
+      "notes": "any additional annotations or observations about this component"
+    }
+  ],
+  "LAYERS_ASSEMBLY": [
+    {
+      "layer_name": "name or function of this layer",
+      "material": "exact material specification",
+      "thickness_mm": "thickness in mm if readable",
+      "position": "from exterior to interior or top to bottom sequence"
+    }
+  ],
+  "TOTAL_ASSEMBLY_THICKNESS": "overall thickness of the complete assembly if readable",
+  "STRUCTURAL_ELEMENTS": "any structural components shown — concrete, steel, timber members with dimensions",
+  "WATERPROOFING": "waterproofing layers, membranes, flashings, sealants — exact positions and materials",
+  "INSULATION": "insulation types (thermal/acoustic), thickness, position within assembly, thermal break details",
+  "FASTENERS_CONNECTORS": "all mechanical fixings — screws, bolts, brackets, clips, anchors — type, size, spacing if annotated",
+  "JUNCTIONS_TRANSITIONS": "how this detail connects to adjacent assemblies — interfaces, tolerances, expansion joints",
+  "DRAINAGE_VENTILATION": "any drainage channels, weep holes, ventilation gaps, air cavities shown",
+  "FINISHES": "finish materials and thicknesses — interior and exterior surfaces",
+  "TOLERANCES_JOINTS": "any indicated tolerances, expansion joints, or control joints",
+  "DIMENSIONS_ANNOTATIONS": "ALL dimension strings exactly as written",
+  "MATERIALS_HATCHING": "interpretation of every hatching pattern — material each represents",
+  "CALLOUTS_REFERENCES": "any callout bubbles, material references, specification notes, revision marks",
+  "NOTES_LEGENDS": "any written notes, legends, symbols explanations, or specifications visible in the drawing",
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading this construction detail as a structural or building envelope engineer — describing every layer, material, fixing strategy, waterproofing logic, and the overall performance intent of this assembly.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this detail analysis, written in English, optimized for a photorealistic close-up architectural rendering showing this construction assembly, 3-5 lines."
+}
+ 
+CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
+ 
+// ─── Concept Sketch analysis prompt (from Doc 3) ──────────────────────────────
+const PROMPT_CONCEPT_SKETCH = `As a forensic architectural analyst, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural concept sketch. Focus on the intent, form, spatial ideas, and implied materials, acknowledging its preliminary nature. Return ONLY a valid JSON object with these fields:
+ 
+{
+  "IMAGE_TYPE": "Concept Sketch — specify hand-drawn, digital sketch, massing study, or diagram",
+  "OVERALL_CONCEPT": "the main architectural idea or vision conveyed by the sketch",
+  "FORM_AND_MASSING": "description of the building's shape, volume, and overall composition",
+  "SPATIAL_IDEAS": "how spaces are conceived, their relationships, and implied functions",
+  "CIRCULATION_IMPLIED": "any implied movement paths, entry points, or connections between areas",
+  "MATERIALS_IMPLIED": "any suggested or implied materials, textures, or finishes",
+  "LIGHTING_ATMOSPHERE": "implied lighting conditions, mood, or ambiance",
+  "CONTEXT_IMPLIED": "any implied site context, landscape, or surrounding elements",
+  "DISTINGUISHING_FEATURES": "any unique or notable design elements, gestures, or forms",
+  "ANNOTATIONS_TEXT": "any handwritten notes, labels, or symbols within the sketch",
+  "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15-20 lines) capturing EVERY nuance — overall impression, design intent, spatial qualities, formal language, and all distinguishing characteristics of the concept sketch.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing the conceptual style, implied materials, lighting, atmosphere, and key architectural features."
 }
  
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
@@ -275,26 +359,27 @@ CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra te
 const PROMPT_GENERIC = `Analyze this architectural image comprehensively. Return ONLY a valid JSON object with the following fields:
 {
   "IMAGE_TYPE": "best classification you can determine",
-  "FULL_DESCRIPTION": "An exceptionally detailed flowing narrative (15–20 lines) capturing every visible nuance — overall impression, materials, spatial qualities, light, atmosphere, and all distinguishing characteristics.",
-  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3–5 lines."
+  "FULL_DESCRIPTION": "An exceptionally detailed flowing narrative (15-20 lines) capturing every visible nuance — overall impression, materials, spatial qualities, light, atmosphere, and all distinguishing characteristics.",
+  "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines."
 }
 No markdown, no extra text.`;
  
-// ─── Prompt selector (normalized, with full category coverage) ───────────────
+// ─── Prompt selector ──────────────────────────────────────────────────────────
 function selectPrompt(imageType: string): string {
-  const t = imageType.trim().toUpperCase().replace(/\s+/g, "_");
+  // Strip all non-letter/underscore characters to prevent garbage classification
+  const t = imageType.trim().toUpperCase().replace(/[^A-Z_]/g, "").replace(/\s+/g, "_");
  
   const map: Record<string, string> = {
-    FLOOR_PLAN:      PROMPT_FLOOR_PLAN,
-    SECTION:         PROMPT_SECTION,
-    ELEVATION:       PROMPT_ELEVATION,
-    SITE_PLAN:       PROMPT_SITE_PLAN,
-    RENDER_3D:       PROMPT_3D,
-    PHOTO:           PROMPT_3D,
-    AXONOMETRIC:     PROMPT_3D,
-    CONCEPT_SKETCH:  PROMPT_3D,
-    DETAIL_DRAWING:  PROMPT_3D,
-    MIXED:           PROMPT_3D,
+    FLOOR_PLAN:     PROMPT_FLOOR_PLAN,
+    SECTION:        PROMPT_SECTION,
+    ELEVATION:      PROMPT_ELEVATION,
+    SITE_PLAN:      PROMPT_SITE_PLAN,
+    RENDER_3D:      PROMPT_3D,
+    PHOTO:          PROMPT_3D,
+    MIXED:          PROMPT_3D,
+    AXONOMETRIC:    PROMPT_AXONOMETRIC,
+    DETAIL_DRAWING: PROMPT_DETAIL_DRAWING,
+    CONCEPT_SKETCH: PROMPT_CONCEPT_SKETCH,
   };
  
   return map[t] ?? PROMPT_GENERIC;
@@ -303,11 +388,28 @@ function selectPrompt(imageType: string): string {
 // ─── Normalize base64 image URL ───────────────────────────────────────────────
 function normalizeImageUrl(base64Image: string): string {
   if (base64Image.startsWith("data:")) return base64Image;
-  // Detect PNG by its base64 prefix (iVBOR) or default to jpeg
-  if (base64Image.startsWith("iVBOR")) {
-    return `data:image/png;base64,${base64Image}`;
-  }
+ 
+  // Detect format by base64 prefix signatures
+  if (base64Image.startsWith("iVBOR")) return `data:image/png;base64,${base64Image}`;
+  if (base64Image.startsWith("UklGR")) return `data:image/webp;base64,${base64Image}`;
+  if (base64Image.startsWith("R0lGO")) return `data:image/gif;base64,${base64Image}`;
+  // Default to JPEG (most common for photos and renders)
   return `data:image/jpeg;base64,${base64Image}`;
+}
+ 
+// ─── Fetch with timeout helper ────────────────────────────────────────────────
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 55_000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
  
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -349,7 +451,7 @@ serve(async (req) => {
       );
     }
  
-    // Normalize image URL defensively before any API call
+    // Normalize image URL before any API call
     const imageUrl = normalizeImageUrl(base64Image);
  
     const imagePayload = {
@@ -359,77 +461,87 @@ serve(async (req) => {
  
     // ── Step 1: Classify image type ───────────────────────────────────────────
     let imageType = "RENDER_3D";
+    let classifierSuccess = false;
  
-    const classifyRes = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: API_MODEL,
-        max_tokens: 20,
-        messages: [
-          { role: "system", content: SYSTEM_PERSONA },
-          {
-            role: "user",
-            content: [
-              imagePayload,
-              { type: "text", text: CLASSIFIER_PROMPT },
-            ],
+    try {
+      const classifyRes = await fetchWithTimeout(
+        `${API_BASE_URL}/v1/chat/completions`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            "Content-Type": "application/json",
           },
-        ],
-      }),
-    });
- 
-    if (classifyRes.ok) {
-      const classifyData = await classifyRes.json();
-      imageType = (
-        classifyData.choices?.[0]?.message?.content || "RENDER_3D"
-      )
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, "_");
-    } else {
-      console.warn(
-        "Classifier step failed — defaulting to RENDER_3D. Status:",
-        classifyRes.status,
-        await classifyRes.text().catch(() => "")
+          body: JSON.stringify({
+            model: API_MODEL,
+            max_tokens: 20,
+            messages: [
+              { role: "system", content: SYSTEM_PERSONA },
+              {
+                role: "user",
+                content: [
+                  imagePayload,
+                  { type: "text", text: CLASSIFIER_PROMPT },
+                ],
+              },
+            ],
+          }),
+        }
       );
+ 
+      if (classifyRes.ok) {
+        const classifyData = await classifyRes.json();
+        const raw = classifyData.choices?.[0]?.message?.content || "";
+        // Strip all non-letter/underscore characters to prevent garbage classification
+        imageType =
+          raw.trim().toUpperCase().replace(/[^A-Z_]/g, "").replace(/\s+/g, "_") ||
+          "RENDER_3D";
+        classifierSuccess = true;
+      } else {
+        console.warn(
+          "Classifier step failed — defaulting to RENDER_3D. Status:",
+          classifyRes.status,
+          await classifyRes.text().catch(() => "")
+        );
+      }
+    } catch (classifyErr) {
+      console.warn("Classifier request error — defaulting to RENDER_3D:", classifyErr);
     }
  
     // ── Step 2: Deep analysis with type-specific prompt ───────────────────────
     const analysisPrompt = selectPrompt(imageType);
  
-    const analysisRes = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: API_MODEL,
-        max_tokens: 4096,
-        messages: [
-          { role: "system", content: SYSTEM_PERSONA },
-          {
-            role: "user",
-            content: [
-              imagePayload,
-              { type: "text", text: analysisPrompt },
-            ],
-          },
-        ],
-      }),
-    });
+    const analysisRes = await fetchWithTimeout(
+      `${API_BASE_URL}/v1/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: API_MODEL,
+          max_tokens: 8192, // Increased — complex floor plans can exceed 4k tokens
+          messages: [
+            { role: "system", content: SYSTEM_PERSONA },
+            {
+              role: "user",
+              content: [
+                imagePayload,
+                { type: "text", text: analysisPrompt },
+              ],
+            },
+          ],
+        }),
+      }
+    );
  
     if (!analysisRes.ok) {
       const status = analysisRes.status;
       if (status === 429) {
         return new Response(
           JSON.stringify({
-            error:
-              "Limite de requisições excedido. Tente novamente em alguns segundos.",
+            error: "Limite de requisições excedido. Tente novamente em alguns segundos.",
           }),
           {
             status: 429,
@@ -440,8 +552,7 @@ serve(async (req) => {
       if (status === 401) {
         return new Response(
           JSON.stringify({
-            error:
-              "Chave da API inválida ou não configurada corretamente.",
+            error: "Chave da API inválida ou não configurada corretamente.",
           }),
           {
             status: 401,
@@ -449,7 +560,7 @@ serve(async (req) => {
           }
         );
       }
-      const errorText = await analysisRes.text();
+      const errorText = await analysisRes.text().catch(() => "");
       console.error("Analysis API error:", status, errorText);
       throw new Error(`API error: ${status}`);
     }
@@ -465,19 +576,27 @@ serve(async (req) => {
     let analysis: Record<string, unknown>;
     try {
       analysis = JSON.parse(jsonStr);
-    } catch {
-      // If JSON parse fails, preserve raw content and flag the issue
+    } catch (parseErr) {
+      // Detect if response was truncated (token limit hit) vs malformed
+      const truncated = jsonStr.length > 0 && !jsonStr.trimEnd().endsWith("}");
+      console.error(
+        `JSON parse failed. Truncated: ${truncated}. Content length: ${jsonStr.length}. Error: ${parseErr}`
+      );
       analysis = {
         IMAGE_TYPE: imageType,
         FULL_DESCRIPTION: content,
         RENDER_PROMPT_READY: "",
-        _parse_error:
-          "Model returned non-JSON content — raw response preserved in FULL_DESCRIPTION",
+        _parse_error: truncated
+          ? "Response was truncated — max_tokens limit may have been reached. Raw response preserved in FULL_DESCRIPTION."
+          : "Model returned non-JSON content — raw response preserved in FULL_DESCRIPTION.",
       };
     }
  
-    // Attach detected image type metadata
-    analysis._detected_image_type = imageType;
+    // Attach metadata
+    analysis._meta = {
+      detected_type: imageType,
+      classifier_success: classifierSuccess,
+    };
  
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -486,8 +605,7 @@ serve(async (req) => {
     console.error("analyze-image error:", e);
     return new Response(
       JSON.stringify({
-        error:
-          e instanceof Error ? e.message : "Erro ao analisar imagem",
+        error: e instanceof Error ? e.message : "Erro ao analisar imagem",
       }),
       {
         status: 500,
