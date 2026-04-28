@@ -1,21 +1,21 @@
 // @ts-nocheck
 // This file runs in Deno environment on Supabase Edge Functions
 // TypeScript errors are expected in local IDE due to Deno-specific APIs
- 
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
- 
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
- 
+
 const SYSTEM_PERSONA = `You are an elite forensic architectural analyst with 30 years of experience across architectural design, technical documentation, and photorealistic rendering. You possess expert-level reading ability for ALL types of architectural representations: photorealistic 3D renders, on-site photography, 2D floor plans, sections, elevations, axonometric drawings, site plans, construction details, and concept sketches.
- 
+
 When analyzing 2D technical drawings (floor plans, sections, elevations), you read them with the precision of a licensed architect: you identify every room by its label or inferred function, read all dimension annotations, interpret hatching patterns as specific materials, recognize standard architectural symbols for doors/windows/stairs/fixtures/furniture, and understand spatial relationships between elements. You extract EVERY piece of information visible in the drawing — no label, dimension, room, wall, opening, furniture block, or notation is overlooked.
- 
+
 You always write analysis in English, with extreme technical precision.`;
- 
+
 // ─── Image type classifier prompt ────────────────────────────────────────────
 const CLASSIFIER_PROMPT = `First, classify this image into EXACTLY ONE of these categories (return only the category string, nothing else, no punctuation, no explanation):
 - RENDER_3D
@@ -28,7 +28,7 @@ const CLASSIFIER_PROMPT = `First, classify this image into EXACTLY ONE of these 
 - DETAIL_DRAWING
 - CONCEPT_SKETCH
 - MIXED
- 
+
 Definitions:
 - RENDER_3D: photorealistic 3D render or CGI visualization
 - PHOTO: real architectural photography
@@ -40,12 +40,12 @@ Definitions:
 - DETAIL_DRAWING: construction detail or node drawing
 - CONCEPT_SKETCH: hand-drawn or loose sketch
 - MIXED: combination of the above
- 
+
 Return ONLY the category string. No extra text, no punctuation.`;
- 
+
 // ─── 3D / Photo / Mixed analysis prompt ──────────────────────────────────────
 const PROMPT_3D = `As a forensic architectural analyst with 30 years of experience, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural image. Return ONLY a valid JSON object with these fields:
- 
+
 {
   "IMAGE_TYPE": "precise classification (photorealistic 3D render, architectural photography, concept sketch, axonometric, perspective, detail drawing, mixed)",
   "ARCHITECTURAL_STYLE": "detailed style with era, movement, influences, and regional variations",
@@ -82,12 +82,12 @@ const PROMPT_3D = `As a forensic architectural analyst with 30 years of experien
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15-20 lines) capturing EVERY nuance — overall impression, massing, proportions, material relationships, spatial qualities, light behavior, atmosphere, and ALL distinguishing characteristics.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing style, materials, lighting, atmosphere, camera angle, and all key architectural features. This field should be directly usable as input for an AI image generator."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
+
 // ─── Floor Plan analysis prompt ──────────────────────────────────────────────
 const PROMPT_FLOOR_PLAN = `You are reading a 2D architectural floor plan. Conduct a COMPREHENSIVE and EXHAUSTIVE analysis extracting every piece of information visible. Return ONLY a valid JSON object:
- 
+
 {
   "IMAGE_TYPE": "Floor Plan — specify if ground floor, upper floor, basement, roof plan, or composite",
   "DRAWING_SCALE": "scale indicated in the drawing (e.g., 1:50, 1:100) or estimated from dimensions",
@@ -144,7 +144,7 @@ const PROMPT_FLOOR_PLAN = `You are reading a 2D architectural floor plan. Conduc
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: A comprehensive narrative (15-20 lines) that reads the floor plan as an experienced architect would — describing the overall spatial concept, room distribution, circulation logic, indoor-outdoor relationships, functional zoning, notable design decisions, and every key element visible. Describe it with enough detail that a contractor or renderer could fully understand the layout without seeing the drawing.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this floor plan analysis, written in English, optimized for photorealistic architectural rendering of the interior spaces described, 3-5 lines, capturing spatial layout, materials, lighting potential, atmosphere, and key architectural features."
 }
- 
+
 CRITICAL INSTRUCTIONS:
 - Read EVERY room label, dimension string, and annotation exactly as written
 - Identify furniture blocks by their standard plan symbols (rectangle = bed/sofa/table, circle = dining chair, etc.)
@@ -153,10 +153,10 @@ CRITICAL INSTRUCTIONS:
 - Count every bathroom fixture, kitchen appliance, and piece of furniture
 - Note the spatial relationship and sequence between all rooms
 - Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
+
 // ─── Section analysis prompt ─────────────────────────────────────────────────
 const PROMPT_SECTION = `You are reading a 2D architectural section drawing. Conduct a COMPREHENSIVE and EXHAUSTIVE analysis. Return ONLY a valid JSON object:
- 
+
 {
   "IMAGE_TYPE": "Section — specify longitudinal/transversal/cross/building section or wall section/detail",
   "DRAWING_SCALE": "scale indicated or estimated",
@@ -189,12 +189,12 @@ const PROMPT_SECTION = `You are reading a 2D architectural section drawing. Cond
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading the section as an architect — describing the spatial sequence cut through, structural logic, floor-to-floor heights, material layering, vertical relationships between spaces, and all key technical details visible.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this section analysis, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing the spatial section view, structural materials, lighting conditions, and architectural atmosphere."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
+
 // ─── Elevation analysis prompt ───────────────────────────────────────────────
 const PROMPT_ELEVATION = `You are reading a 2D architectural elevation drawing. Conduct a COMPREHENSIVE and EXHAUSTIVE analysis. Return ONLY a valid JSON object:
- 
+
 {
   "IMAGE_TYPE": "Elevation — specify which face (North/South/East/West/Front/Rear/Left/Right/Interior)",
   "DRAWING_SCALE": "scale indicated or estimated",
@@ -238,12 +238,12 @@ const PROMPT_ELEVATION = `You are reading a 2D architectural elevation drawing. 
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading the elevation as an architect — describing the overall facade composition, material palette, fenestration strategy, proportional system, architectural character, and every notable feature visible from this face of the building.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this elevation analysis, written in English, optimized for photorealistic architectural rendering of this facade, 3-5 lines, capturing facade materials, fenestration, architectural style, lighting angle, and atmosphere."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
+
 // ─── Site Plan analysis prompt ───────────────────────────────────────────────
 const PROMPT_SITE_PLAN = `You are reading a 2D architectural site plan. Conduct a COMPREHENSIVE and EXHAUSTIVE analysis. Return ONLY a valid JSON object:
- 
+
 {
   "IMAGE_TYPE": "Site Plan — specify scale and coverage area",
   "DRAWING_SCALE": "scale indicated or estimated",
@@ -268,12 +268,12 @@ const PROMPT_SITE_PLAN = `You are reading a 2D architectural site plan. Conduct 
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading the site plan as a landscape architect — describing the lot geometry, building placement strategy, outdoor space hierarchy, circulation, landscaping concept, and all key site elements.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this site plan analysis, written in English, optimized for photorealistic architectural aerial or bird's-eye rendering, 3-5 lines, capturing site layout, landscaping, materials, lighting, and surrounding context."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
-// ─── Axonometric analysis prompt (from Doc 3) ─────────────────────────────────
+
+// ─── Axonometric analysis prompt ──────────────────────────────────────────────
 const PROMPT_AXONOMETRIC = `As a forensic architectural analyst, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural axonometric drawing. Focus on the spatial relationships, structural elements, and material indications without perspective distortion. Return ONLY a valid JSON object with these fields:
- 
+
 {
   "IMAGE_TYPE": "Axonometric — specify isometric, dimetric, or trimetric",
   "OVERALL_COMPOSITION": "description of the main architectural elements and their arrangement in the axonometric view",
@@ -289,12 +289,12 @@ const PROMPT_AXONOMETRIC = `As a forensic architectural analyst, conduct a COMPR
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15-20 lines) capturing EVERY nuance — overall impression, massing, proportions, material relationships, spatial qualities, light behavior, atmosphere, and ALL distinguishing characteristics of the axonometric view.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing style, materials, lighting, atmosphere, camera angle, and all key architectural features in an axonometric style."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
-// ─── Detail Drawing analysis prompt (from Doc 3, enhanced) ───────────────────
+
+// ─── Detail Drawing analysis prompt ───────────────────────────────────────────
 const PROMPT_DETAIL_DRAWING = `You are reading a 2D architectural detail drawing or construction node. Conduct a COMPREHENSIVE and EXHAUSTIVE analysis extracting every piece of information visible. Focus on materials, connections, dimensions, and construction methods. Return ONLY a valid JSON object:
- 
+
 {
   "IMAGE_TYPE": "Detail Drawing — specify type (wall node, roof edge, window jamb/head/sill, connection, junction, floor build-up, etc.)",
   "DRAWING_SCALE": "scale indicated or estimated (detail drawings are typically 1:5, 1:10, 1:20)",
@@ -332,12 +332,12 @@ const PROMPT_DETAIL_DRAWING = `You are reading a 2D architectural detail drawing
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: A detailed narrative (15-20 lines) reading this construction detail as a structural or building envelope engineer — describing every layer, material, fixing strategy, waterproofing logic, and the overall performance intent of this assembly.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from this detail analysis, written in English, optimized for a photorealistic close-up architectural rendering showing this construction assembly, 3-5 lines."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
-// ─── Concept Sketch analysis prompt (from Doc 3) ──────────────────────────────
+
+// ─── Concept Sketch analysis prompt ──────────────────────────────────────────
 const PROMPT_CONCEPT_SKETCH = `As a forensic architectural analyst, conduct a COMPREHENSIVE and EXHAUSTIVE analysis of every single detail visible in this architectural concept sketch. Focus on the intent, form, spatial ideas, and implied materials, acknowledging its preliminary nature. Return ONLY a valid JSON object with these fields:
- 
+
 {
   "IMAGE_TYPE": "Concept Sketch — specify hand-drawn, digital sketch, massing study, or diagram",
   "OVERALL_CONCEPT": "the main architectural idea or vision conveyed by the sketch",
@@ -352,9 +352,9 @@ const PROMPT_CONCEPT_SKETCH = `As a forensic architectural analyst, conduct a CO
   "FULL_DESCRIPTION": "MASTER DESCRIPTION: An exceptionally detailed flowing narrative (15-20 lines) capturing EVERY nuance — overall impression, design intent, spatial qualities, formal language, and all distinguishing characteristics of the concept sketch.",
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines, capturing the conceptual style, implied materials, lighting, atmosphere, and key architectural features."
 }
- 
+
 CRITICAL: Return ONLY the JSON object. No markdown, no explanations, no extra text.`;
- 
+
 // ─── Generic fallback prompt ──────────────────────────────────────────────────
 const PROMPT_GENERIC = `Analyze this architectural image comprehensively. Return ONLY a valid JSON object with the following fields:
 {
@@ -363,12 +363,11 @@ const PROMPT_GENERIC = `Analyze this architectural image comprehensively. Return
   "RENDER_PROMPT_READY": "A ready-to-use image generation prompt synthesized from the analysis above, written in English, optimized for photorealistic architectural rendering, 3-5 lines."
 }
 No markdown, no extra text.`;
- 
+
 // ─── Prompt selector ──────────────────────────────────────────────────────────
 function selectPrompt(imageType: string): string {
-  // Strip all non-letter/underscore characters to prevent garbage classification
   const t = imageType.trim().toUpperCase().replace(/[^A-Z_]/g, "").replace(/\s+/g, "_");
- 
+
   const map: Record<string, string> = {
     FLOOR_PLAN:     PROMPT_FLOOR_PLAN,
     SECTION:        PROMPT_SECTION,
@@ -381,22 +380,34 @@ function selectPrompt(imageType: string): string {
     DETAIL_DRAWING: PROMPT_DETAIL_DRAWING,
     CONCEPT_SKETCH: PROMPT_CONCEPT_SKETCH,
   };
- 
+
   return map[t] ?? PROMPT_GENERIC;
 }
- 
+
 // ─── Normalize base64 image URL ───────────────────────────────────────────────
 function normalizeImageUrl(base64Image: string): string {
   if (base64Image.startsWith("data:")) return base64Image;
- 
-  // Detect format by base64 prefix signatures
   if (base64Image.startsWith("iVBOR")) return `data:image/png;base64,${base64Image}`;
   if (base64Image.startsWith("UklGR")) return `data:image/webp;base64,${base64Image}`;
   if (base64Image.startsWith("R0lGO")) return `data:image/gif;base64,${base64Image}`;
-  // Default to JPEG (most common for photos and renders)
   return `data:image/jpeg;base64,${base64Image}`;
 }
- 
+
+// ─── Extract base64 data from data URL ───────────────────────────────────────
+function extractBase64Data(dataUrl: string): { mediaType: string; data: string } {
+  if (dataUrl.startsWith("data:")) {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (match) {
+      return { mediaType: match[1], data: match[2] };
+    }
+  }
+  // Raw base64 — detect format
+  if (dataUrl.startsWith("iVBOR")) return { mediaType: "image/png",  data: dataUrl };
+  if (dataUrl.startsWith("UklGR")) return { mediaType: "image/webp", data: dataUrl };
+  if (dataUrl.startsWith("R0lGO")) return { mediaType: "image/gif",  data: dataUrl };
+  return { mediaType: "image/jpeg", data: dataUrl };
+}
+
 // ─── Fetch with timeout helper ────────────────────────────────────────────────
 async function fetchWithTimeout(
   url: string,
@@ -411,13 +422,74 @@ async function fetchWithTimeout(
     clearTimeout(timer);
   }
 }
- 
+
+// ─── Call Claude via CometAPI (Anthropic-compatible format) ───────────────────
+async function callClaude(
+  apiKey: string,
+  apiBaseUrl: string,
+  model: string,
+  systemPrompt: string,
+  userContent: unknown[],
+  maxTokens: number
+): Promise<string> {
+  const res = await fetchWithTimeout(
+    `${apiBaseUrl}/v1/messages`,
+    {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: userContent,
+          },
+        ],
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const status = res.status;
+    if (status === 429) throw new Error("RATE_LIMIT");
+    if (status === 401) throw new Error("UNAUTHORIZED");
+    const errText = await res.text().catch(() => "");
+    console.error("Claude API error:", status, errText);
+    throw new Error(`API_ERROR:${status}`);
+  }
+
+  const data = await res.json();
+  // Anthropic format: data.content[0].text
+  const content = data?.content?.[0]?.text || "";
+  return content;
+}
+
+// ─── Generate a lightweight integrity signature ───────────────────────────────
+// Not cryptographic — just a fingerprint so generate-prompt can detect
+// whether imageDescription was produced by this function in this session.
+function generateSignature(description: string, imageType: string, timestamp: number): string {
+  const raw = `${imageType}|${timestamp}|${description.length}|PROMPTRENDER_V2`;
+  // Simple djb2-style hash encoded as hex string
+  let hash = 5381;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash) ^ raw.charCodeAt(i);
+    hash = hash >>> 0; // keep unsigned 32-bit
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
- 
+
   try {
     const { base64Image } = await req.json();
     if (!base64Image) {
@@ -426,191 +498,151 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
- 
-    const API_KEY =
-      Deno.env.get("COMET_API_KEY") ||
-      Deno.env.get("OPENAI_API_KEY") ||
-      "test-key-replace-with-real-key";
-    const API_MODEL =
-      Deno.env.get("COMET_MODEL") ||
-      Deno.env.get("OPENAI_MODEL") ||
-      "gpt-4o";
-    const API_BASE_URL =
-      Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
- 
-    if (!API_KEY || API_KEY === "test-key-replace-with-real-key") {
+
+    const API_KEY     = Deno.env.get("COMET_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
+    const API_MODEL   = Deno.env.get("COMET_MODEL")   || "claude-sonnet-4-6";
+    const API_BASE_URL = Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
+
+    if (!API_KEY) {
       return new Response(
         JSON.stringify({
-          error:
-            "API_KEY não configurada. Adicione sua chave da API (CometAPI ou OpenAI) nas variáveis de ambiente do Supabase.",
+          error: "API_KEY não configurada. Adicione COMET_API_KEY nas variáveis de ambiente do Supabase.",
         }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
- 
-    // Normalize image URL before any API call
-    const imageUrl = normalizeImageUrl(base64Image);
- 
-    const imagePayload = {
-      type: "image_url",
-      image_url: { url: imageUrl, detail: "high" },
+
+    // Extract base64 data and media type for Anthropic image format
+    const { mediaType, data: imageData } = extractBase64Data(base64Image);
+
+    // Anthropic image content block
+    const imageBlock = {
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: mediaType,
+        data: imageData,
+      },
     };
- 
+
     // ── Step 1: Classify image type ───────────────────────────────────────────
     let imageType = "RENDER_3D";
     let classifierSuccess = false;
- 
+
     try {
-      const classifyRes = await fetchWithTimeout(
-        `${API_BASE_URL}/v1/chat/completions`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: API_MODEL,
-            max_tokens: 20,
-            messages: [
-              { role: "system", content: SYSTEM_PERSONA },
-              {
-                role: "user",
-                content: [
-                  imagePayload,
-                  { type: "text", text: CLASSIFIER_PROMPT },
-                ],
-              },
-            ],
-          }),
-        }
+      const classifyContent = await callClaude(
+        API_KEY,
+        API_BASE_URL,
+        API_MODEL,
+        SYSTEM_PERSONA,
+        [
+          imageBlock,
+          { type: "text", text: CLASSIFIER_PROMPT },
+        ],
+        20
       );
- 
-      if (classifyRes.ok) {
-        const classifyData = await classifyRes.json();
-        const raw = classifyData.choices?.[0]?.message?.content || "";
-        // Strip all non-letter/underscore characters to prevent garbage classification
-        imageType =
-          raw.trim().toUpperCase().replace(/[^A-Z_]/g, "").replace(/\s+/g, "_") ||
-          "RENDER_3D";
-        classifierSuccess = true;
-      } else {
-        console.warn(
-          "Classifier step failed — defaulting to RENDER_3D. Status:",
-          classifyRes.status,
-          await classifyRes.text().catch(() => "")
-        );
-      }
+
+      imageType =
+        classifyContent.trim().toUpperCase().replace(/[^A-Z_]/g, "").replace(/\s+/g, "_") ||
+        "RENDER_3D";
+      classifierSuccess = true;
     } catch (classifyErr) {
-      console.warn("Classifier request error — defaulting to RENDER_3D:", classifyErr);
+      console.warn("Classifier step failed — defaulting to RENDER_3D:", classifyErr);
     }
- 
+
     // ── Step 2: Deep analysis with type-specific prompt ───────────────────────
     const analysisPrompt = selectPrompt(imageType);
- 
-    const analysisRes = await fetchWithTimeout(
-      `${API_BASE_URL}/v1/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: API_MODEL,
-          max_tokens: 8192, // Increased — complex floor plans can exceed 4k tokens
-          messages: [
-            { role: "system", content: SYSTEM_PERSONA },
-            {
-              role: "user",
-              content: [
-                imagePayload,
-                { type: "text", text: analysisPrompt },
-              ],
-            },
-          ],
-        }),
-      }
-    );
- 
-    if (!analysisRes.ok) {
-      const status = analysisRes.status;
-      if (status === 429) {
+
+    let rawContent: string;
+    try {
+      rawContent = await callClaude(
+        API_KEY,
+        API_BASE_URL,
+        API_MODEL,
+        SYSTEM_PERSONA,
+        [
+          imageBlock,
+          { type: "text", text: analysisPrompt },
+        ],
+        8192
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "RATE_LIMIT") {
         return new Response(
-          JSON.stringify({
-            error: "Limite de requisições excedido. Tente novamente em alguns segundos.",
-          }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (status === 401) {
+      if (msg === "UNAUTHORIZED") {
         return new Response(
-          JSON.stringify({
-            error: "Chave da API inválida ou não configurada corretamente.",
-          }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ error: "Chave da API inválida ou não configurada corretamente." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const errorText = await analysisRes.text().catch(() => "");
-      console.error("Analysis API error:", status, errorText);
-      throw new Error(`API error: ${status}`);
+      throw err;
     }
- 
-    const data = await analysisRes.json();
-    const content = data.choices?.[0]?.message?.content || "";
- 
-    // Strip markdown fences if model wraps response in ```json ... ```
-    let jsonStr = content.trim();
+
+    // Strip markdown fences if model wraps response
+    let jsonStr = rawContent.trim();
     const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) jsonStr = fenceMatch[1].trim();
- 
+
     let analysis: Record<string, unknown>;
     try {
       analysis = JSON.parse(jsonStr);
     } catch (parseErr) {
-      // Detect if response was truncated (token limit hit) vs malformed
       const truncated = jsonStr.length > 0 && !jsonStr.trimEnd().endsWith("}");
       console.error(
         `JSON parse failed. Truncated: ${truncated}. Content length: ${jsonStr.length}. Error: ${parseErr}`
       );
       analysis = {
         IMAGE_TYPE: imageType,
-        FULL_DESCRIPTION: content,
+        FULL_DESCRIPTION: rawContent,
         RENDER_PROMPT_READY: "",
         _parse_error: truncated
-          ? "Response was truncated — max_tokens limit may have been reached. Raw response preserved in FULL_DESCRIPTION."
+          ? "Response was truncated — max_tokens limit may have been reached."
           : "Model returned non-JSON content — raw response preserved in FULL_DESCRIPTION.",
       };
     }
- 
-    // Attach metadata
+
+    // ── Step 3: Build imageDescription string and attach integrity metadata ───
+    //
+    // FULL_DESCRIPTION is the primary field used by generate-prompt as
+    // BASE_IMAGE_DESCRIPTION. We build it here and attach a signature so
+    // generate-prompt can verify the description originated from this function.
+
+    const fullDescription = (analysis.FULL_DESCRIPTION as string) || jsonStr;
+    const timestamp = Date.now();
+    const signature = generateSignature(fullDescription, imageType, timestamp);
+
+    // Attach metadata the generate-prompt will validate
     analysis._meta = {
       detected_type: imageType,
       classifier_success: classifierSuccess,
     };
- 
+
+    // _integrity block — consumed by generate-prompt for origin validation
+    analysis._integrity = {
+      source: "analyze-image",      // must equal "analyze-image"
+      version: 2,                   // must equal 2
+      timestamp,                    // Unix ms — generate-prompt checks freshness
+      detected_type: imageType,
+      description_length: fullDescription.length,
+      signature,                    // re-computed by generate-prompt to verify
+    };
+
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("analyze-image error:", e);
     return new Response(
       JSON.stringify({
         error: e instanceof Error ? e.message : "Erro ao analisar imagem",
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
