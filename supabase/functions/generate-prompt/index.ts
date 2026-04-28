@@ -42,10 +42,10 @@ MERGING RULES:
 7. Final Output: A single prompt text ready for an AI image generator, optimized for photorealism and strict architectural fidelity. The prompt must repeatedly reinforce that the original geometry is immutable.`;
  
 // ─────────────────────────────────────────────
-// SUFFIX
+// SUFFIX — otimizado para Midjourney v6.1
 // ─────────────────────────────────────────────
  
-const SUFFIX = `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must achieve maximum photorealistic quality while rendering ONLY the architectural elements, materials, and spatial configuration present in the original base model — no additions, no creative interpolations, no invented context.`;
+const SUFFIX = `Camera simulation: full-frame sensor, 35mm prime lens, F5.6 aperture, ISO 100, 1/250s, correct exposure metering with no blown highlights and full shadow detail retained. Color grading: neutral LUT with slight warm bias, contrast curve lifted at midtones, no artificial saturation boost. Output sharpness equivalent to medium-format architectural photography. Subtle film grain at 3%, real lens vignette, no HDR halo artifacts. The final image must achieve maximum photorealistic quality while rendering ONLY the architectural elements, materials, and spatial configuration present in the original base model — no additions, no creative interpolations, no invented context. --style raw --stylize 750 --ar 16:9 --q 2 --v 6.1`;
  
 // ─────────────────────────────────────────────
 // NEGATIVE PROMPT
@@ -65,8 +65,6 @@ Preserve all geometric and proportional integrity of the original design without
  
 // ─────────────────────────────────────────────
 // RENDER PROMPTS
-// Merged: prompts mais detalhados do Doc 4 onde aplicável,
-// estrutura de categorias e validações do Doc 5.
 // ─────────────────────────────────────────────
  
 const RENDER_PROMPTS: Record<string, string> = {
@@ -79,7 +77,6 @@ const RENDER_PROMPTS: Record<string, string> = {
  
   render_aereo: `Apply hyper-photorealistic rendering to the existing full site geometry exactly as modeled, emulating professional cinematic drone photography. STRICTLY preserve 100% of the site layout, roof geometry, landscaping footprint, and all architectural volumes — no alterations. Apply exposure, white balance, and color grading to mimic a high-end drone camera at 80 meters altitude, 45-degree oblique angle, with precise perspective foreshortening and corrected lens distortion. Render only what is present in the original model.`,
  
-  // Doc 4 version — more precise macro lens spec for detail renders
   render_detalhe: `Apply hyper-photorealistic rendering to the existing architectural detail geometry exactly as modeled, emulating professional macro architectural photography. STRICTLY preserve 100% of the original geometry of the detail being shown (e.g., material junction, window reveal, structural connection, facade joint, canopy edge) — no modifications to form or proportion. Apply exposure and depth of field to mimic a DSLR camera with an 85mm macro lens at F2.0, with a razor-sharp focus plane precisely on the primary detail surface. Render only materials and textures onto the existing geometry.`,
  
   render_corte: `Apply hyper-photorealistic rendering to the existing architectural section geometry exactly as modeled, emulating a professional cut-through visualization. STRICTLY preserve 100% of the section geometry, floor-to-floor heights, slab thicknesses, wall depths, stair configurations, and spatial relationships between internal environments as drawn. The cut plane MUST remain exactly as defined in the original, with no reinterpretation or closing of any opening created by the section cut. Apply camera simulation to a DSLR positioned perfectly perpendicular to the cut plane, with a true orthographic or near-orthographic perspective, ensuring the full section height is in frame and free of perspective distortion. IMPORTANT: All spaces, rooms, and environments depicted in the section must be faithfully preserved and rendered with photorealistic materials and lighting. The final output must be completely free of any technical annotation, text, dimension lines, section cut symbols, level markers, grid references, or any other documentary graphic element — present only the pure architectural section geometry with photorealistic quality.`,
@@ -116,7 +113,6 @@ const RENDER_PROMPTS: Record<string, string> = {
  
   jardim: `For the existing garden and vegetation areas present in the original model: apply physically based rendering (PBR) foliage to existing vegetation, showcasing natural, vibrant colors, physically correct leaf textures with subtle imperfections (e.g., veins, slight wilting, dew drops), and accurate natural scale. Simulate advanced subsurface scattering for existing leaves and petals. Ensure natural lighting coherent with the environment, producing realistic, soft-edged shadows cast by existing vegetation. Apply botanical detail and photorealistic organic materials to existing planting elements only.`,
  
-  // Doc 4 version — richer material detail spec
   area_gourmet: `For the existing gourmet area present in the original model: apply ambient string lighting with realistic light falloff and subtle bloom for a warm, inviting atmosphere to existing light fixture locations. Apply physically based rendering (PBR) materials to existing elements — natural wood for existing pergola and furniture with authentic grain and subtle weathering, natural stone or high-quality porcelain to existing countertops with accurate reflectivity and micro-imperfections, brushed stainless steel to existing appliances with anisotropic reflections. Ensure warm and balanced global illumination coherent with a high-end gourmet environment.`,
  
   garagem: `For the existing garage and approach area present in the original model: apply physically based rendering (PBR) floor texture (e.g., concrete, pavers, asphalt) to the existing paved approach with subtle wear, tire marks, and accurate reflectivity. Apply precise PBR material finishes (e.g., brushed metal, textured concrete, natural wood) to the existing architectural car portal detail. If vehicles are already present in the original model, render them with accurate paint reflections, subtle dust, and realistic tire textures. Ensure natural global illumination coherent with the existing facade lighting.`,
@@ -163,7 +159,6 @@ const RENDER_PROMPTS: Record<string, string> = {
  
   ambiente_banheiro: `For the existing bathroom present in the original model: camera positioned at 1.4 meters height, lens axis horizontal, positioned to capture the existing full vanity and mirror wall as primary focal element with spatial depth extending toward existing shower or bath zone in background. Focal length equivalent to 20mm to 24mm to maximize perceived spatial generosity. Apply high specular accuracy rendering to existing mirror surfaces, existing glazed ceramic and porcelain surfaces, and existing chrome and brushed metal fixtures. Apply primary light rendering at existing overhead downlights at 3000K supplemented by existing vanity mirror lighting at 2700K. Apply steam or moisture atmosphere as subtle humidity haze on existing glass surfaces where contextually appropriate.`,
  
-  // Doc 4 version — richer spec with "selective illumination" detail
   ambiente_lavabo: `For the existing powder room present in the original model: camera positioned at 1.2 to 1.4 meters height, tight framing centered on the existing vanity unit and mirror as the singular focal composition. Focal length equivalent to 28mm to 35mm, controlled framing that captures the existing space. Apply dramatic and intentional lighting — accent lighting on existing mirror perimeter, downlight on existing countertop surface, strong specular response on all existing reflective surfaces including mirror, basin, tap fixtures, and wall cladding. Atmosphere sophisticated and moody with higher contrast — deeper shadow zones acceptable and desirable, highlights on existing fixtures and basin intentionally pronounced. Color temperature warm at 2700K to 3000K. Selective illumination reinforces the premium, intimate character of the existing space.`,
  
   ambiente_sala_estar: `For the existing living room present in the original model: camera positioned at 1.1 to 1.2 meters height, slightly below standard eye level. Focal length equivalent to 24mm to 35mm, wide enough to capture the existing full social zone — existing sofa grouping, coffee table, TV wall or feature wall, and connection to adjacent areas. Apply lighting with multiple simultaneous sources — dominant natural light from existing large window or glazed opening, existing ceiling fixtures at 3000K, existing floor and table lamps at 2700K. Atmosphere relaxed, warm — moderate contrast, rich shadow detail, all existing upholstery and textile surfaces rendered with accurate fabric softness. Depth of field with existing foreground furniture in sharp focus.`,
@@ -190,7 +185,7 @@ const RENDER_PROMPTS: Record<string, string> = {
 };
  
 // ─────────────────────────────────────────────
-// CATEGORIAS — estrutura do Doc 5
+// CATEGORIAS
 // ─────────────────────────────────────────────
  
 const PROMPT_CATEGORIES: Record<string, string[]> = {
@@ -203,7 +198,7 @@ const PROMPT_CATEGORIES: Record<string, string[]> = {
     "ambiente_quarto_principal", "ambiente_quarto_hospedes", "ambiente_banheiro", "ambiente_lavabo",
     "ambiente_sala_estar", "ambiente_sala_jantar", "ambiente_cozinha", "ambiente_copa",
     "ambiente_home_theater", "ambiente_escritorio", "ambiente_biblioteca", "ambiente_area_jogos",
-    "ambiente_varanda", "ambiente_terraco", "ambiente_area_servico",
+    "ambiente_varando", "ambiente_terraco", "ambiente_area_servico",
   ],
   "CÂMERA / PERSPECTIVA": ["eye_level", "worm_eye", "bird_eye", "dutch_angle", "wide_angle"],
 };
@@ -240,6 +235,67 @@ const INCOMPATIBLE_PAIRS: [string, string, string][] = [
 ];
  
 // ─────────────────────────────────────────────
+// VALIDAÇÃO DE QUALIDADE DA DESCRIÇÃO
+// ─────────────────────────────────────────────
+ 
+// Comprimento mínimo aceitável para uma descrição arquitetônica real
+const MIN_DESCRIPTION_LENGTH = 150;
+ 
+// Palavras-chave arquitetônicas — aceita português e inglês
+// (o analyze-image pode retornar em qualquer um dos dois)
+const ARCHITECTURAL_KEYWORDS = [
+  // português
+  "fachada", "parede", "janela", "porta", "telhado", "cobertura", "laje",
+  "pavimento", "piso", "teto", "varanda", "sacada", "edifício", "edificio",
+  "residência", "residencia", "apartamento", "casa", "sala", "quarto",
+  "banheiro", "cozinha", "corredor", "escada", "pilares", "estrutura",
+  "volumetria", "planta", "corte", "fachada", "ambientes",
+  // inglês
+  "facade", "wall", "window", "door", "roof", "slab", "floor", "ceiling",
+  "balcony", "building", "residence", "apartment", "room", "bedroom",
+  "bathroom", "kitchen", "corridor", "staircase", "column", "structure",
+  "massing", "elevation", "section", "interior", "exterior", "architectural",
+  "architecture", "render", "rendering",
+];
+ 
+/**
+ * Valida se imageDescription contém conteúdo arquitetônico real.
+ * Retorna null se válida, ou string de erro se inválida.
+ */
+function validateImageDescription(
+  imageDescription: string,
+  meta: Record<string, unknown>
+): string | null {
+  const trimmed = imageDescription.trim();
+ 
+  // 1. Comprimento mínimo
+  if (trimmed.length < MIN_DESCRIPTION_LENGTH) {
+    return `imageDescription muito curta (${trimmed.length} caracteres). O mínimo esperado é ${MIN_DESCRIPTION_LENGTH} caracteres. Execute o analyze-image primeiro para gerar uma descrição válida.`;
+  }
+ 
+  // 2. Verificar conteúdo arquitetônico
+  const lower = trimmed.toLowerCase();
+  const hasArchitecturalContent = ARCHITECTURAL_KEYWORDS.some((kw) =>
+    lower.includes(kw)
+  );
+  if (!hasArchitecturalContent) {
+    return "imageDescription não contém terminologia arquitetônica reconhecível. Certifique-se de que a descrição foi gerada pelo analyze-image a partir de uma imagem arquitetônica.";
+  }
+ 
+  // 3. Verificar origem — campo _source injetado pelo analyze-image
+  if (meta._source && meta._source !== "analyze-image") {
+    return `imageDescription possui origem inválida: "${meta._source}". Apenas descrições geradas pelo analyze-image são aceitas.`;
+  }
+ 
+  // 4. Verificar versão do schema, se presente
+  if (meta._version !== undefined && typeof meta._version !== "number") {
+    return "Campo _version inválido na metadata da descrição.";
+  }
+ 
+  return null; // válida
+}
+ 
+// ─────────────────────────────────────────────
 // CORS
 // ─────────────────────────────────────────────
  
@@ -274,70 +330,127 @@ serve(async (req) => {
   }
  
   try {
-    const { imageDescription, selectedKeys, humanizationText } = await req.json();
+    const {
+      imageDescription,
+      selectedKeys,
+      humanizationText,
+      // meta é opcional — injetado pelo frontend quando a descrição
+      // veio do analyze-image (ex: { _source: "analyze-image", _version: 1 })
+      meta = {},
+    } = await req.json();
  
-    // ── Validação: imageDescription ───────────────────────────────────────
-    if (!imageDescription || typeof imageDescription !== "string" || imageDescription.trim() === "") {
+    // ── Validação: imageDescription ──────────────────────────────────────────
+    if (
+      !imageDescription ||
+      typeof imageDescription !== "string" ||
+      imageDescription.trim() === ""
+    ) {
       return new Response(
-        JSON.stringify({ error: "imageDescription é obrigatório e deve ser uma string não vazia." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "imageDescription é obrigatório e deve ser uma string não vazia. Execute o analyze-image para gerar a descrição da imagem antes de chamar esta função.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
  
-    // ── Validação: selectedKeys ───────────────────────────────────────────
+    // Validação de qualidade e origem da descrição
+    const descriptionError = validateImageDescription(
+      imageDescription,
+      meta as Record<string, unknown>
+    );
+    if (descriptionError) {
+      return new Response(
+        JSON.stringify({ error: descriptionError }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+ 
+    // ── Validação: selectedKeys ───────────────────────────────────────────────
     if (!Array.isArray(selectedKeys) || selectedKeys.length === 0) {
       return new Response(
-        JSON.stringify({ error: "selectedKeys deve ser um array com ao menos uma chave válida." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "selectedKeys deve ser um array com ao menos uma chave válida.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
  
-    // ── Validação: categorias obrigatórias presentes ──────────────────────
+    // ── Validação: categorias obrigatórias ───────────────────────────────────
     for (const category of MANDATORY_CATEGORIES) {
-      const hasSelection = PROMPT_CATEGORIES[category].some((key) => selectedKeys.includes(key));
+      const hasSelection = PROMPT_CATEGORIES[category].some((key) =>
+        selectedKeys.includes(key)
+      );
       if (!hasSelection) {
         return new Response(
-          JSON.stringify({ error: `É obrigatório selecionar ao menos uma opção da categoria: ${category}.` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: `É obrigatório selecionar ao menos uma opção da categoria: ${category}.`,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
     }
  
-    // ── Validação: máximo de 1 seleção por categoria obrigatória ──────────
+    // ── Validação: máximo de uma seleção por categoria obrigatória ────────────
     for (const category of MANDATORY_CATEGORIES) {
-      const selectedInCategory = PROMPT_CATEGORIES[category].filter((key) => selectedKeys.includes(key));
+      const selectedInCategory = PROMPT_CATEGORIES[category].filter((key) =>
+        selectedKeys.includes(key)
+      );
       if (selectedInCategory.length > 1) {
         return new Response(
           JSON.stringify({
             error: `Apenas uma opção pode ser selecionada para a categoria: ${category}. Selecionadas: ${selectedInCategory.join(", ")}`,
           }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
     }
  
-    // ── Validação: pares incompatíveis ────────────────────────────────────
+    // ── Validação: pares incompatíveis ───────────────────────────────────────
     for (const [keyA, keyB, reason] of INCOMPATIBLE_PAIRS) {
       if (selectedKeys.includes(keyA) && selectedKeys.includes(keyB)) {
         return new Response(
           JSON.stringify({ error: `Combinação incompatível: ${reason}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
     }
  
-    // ── Validação: máximo de 2 blocos de entorno ──────────────────────────
-    const entornoKeys = selectedKeys.filter((k) => k.startsWith("entorno_"));
+    // ── Validação: máximo de 2 blocos de entorno ─────────────────────────────
+    const entornoKeys = selectedKeys.filter((k: string) =>
+      k.startsWith("entorno_")
+    );
     if (entornoKeys.length > 2) {
       return new Response(
         JSON.stringify({
           error: `Máximo de 2 blocos de entorno permitidos. Recebidos: ${entornoKeys.join(", ")}`,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
  
-    // ── Resolve e ordena os blocos hierarquicamente ───────────────────────
+    // ── Resolução dos blocos ─────────────────────────────────────────────────
     const resolvedBlocks: string[] = [];
     const unknownKeys: string[] = [];
     const emptyAmbienteKeys: string[] = [];
@@ -355,7 +468,9 @@ serve(async (req) => {
           if (blockText === "") {
             emptyAmbienteKeys.push(key);
           } else {
-            selectedBlocksByCategory[category].push(`[${key.toUpperCase()}]\n${blockText}`);
+            selectedBlocksByCategory[category].push(
+              `[${key.toUpperCase()}]\n${blockText}`
+            );
           }
           foundCategory = true;
           break;
@@ -377,19 +492,30 @@ serve(async (req) => {
         JSON.stringify({
           error: `Nenhum bloco com conteúdo válido encontrado. Chaves inválidas: ${unknownKeys.join(", ")}${emptyAmbienteKeys.length > 0 ? `. Ambientes sem prompt configurado: ${emptyAmbienteKeys.join(", ")}` : ""}`,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
  
-    // ── Config da API ─────────────────────────────────────────────────────
+    // ── Configuração da API ──────────────────────────────────────────────────
+    // Suporta CometAPI com claude-sonnet-4-6.
+    // Variáveis de ambiente esperadas no Supabase:
+    //   COMET_API_KEY   — chave da CometAPI
+    //   COMET_API_URL   — base URL (default: https://api.cometapi.com)
+    //   COMET_MODEL     — modelo (default: claude-sonnet-4-6)
     const API_KEY =
       Deno.env.get("COMET_API_KEY") ||
       Deno.env.get("OPENAI_API_KEY") ||
       "";
+ 
+    // Modelo padrão: claude-sonnet-4-6 via CometAPI
     const API_MODEL =
       Deno.env.get("COMET_MODEL") ||
       Deno.env.get("OPENAI_MODEL") ||
-      "gpt-4o"; // gpt-4o — mais capaz para merge complexo
+      "claude-sonnet-4-6";
+ 
     const API_BASE_URL =
       Deno.env.get("COMET_API_URL") || "https://api.cometapi.com";
  
@@ -397,14 +523,22 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error:
-            "API_KEY não configurada. Adicione sua chave nas variáveis de ambiente do Supabase (COMET_API_KEY ou OPENAI_API_KEY).",
+            "API_KEY não configurada. Adicione sua chave nas variáveis de ambiente do Supabase (COMET_API_KEY).",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
  
-    // ── Monta system e user message ───────────────────────────────────────
-    const systemContent = [SYSTEM_PERSONA, MASTER_MERGE_PROMPT, MERGE_AGENT].join("\n\n");
+    // ── Montagem do prompt ───────────────────────────────────────────────────
+    const systemContent = [
+      SYSTEM_PERSONA,
+      MASTER_MERGE_PROMPT,
+      MERGE_AGENT,
+    ].join("\n\n");
+ 
     const selectedBlocksText = resolvedBlocks.join("\n\n");
  
     const userMessage =
@@ -414,64 +548,158 @@ serve(async (req) => {
       `OPTIONAL_PEOPLE_ANIMALS (add only if described — do not invent):\n${humanizationText?.trim() || "(none)"}\n\n` +
       `Generate the merged prompt now. The output must repeatedly reinforce fidelity to the existing geometry. Return only the final merged prompt text, no explanations, no preamble.`;
  
-    // ── Chamada à API com timeout ─────────────────────────────────────────
-    const response = await fetchWithTimeout(
-      `${API_BASE_URL}/v1/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: API_MODEL,
-          max_tokens: 3000,
-          messages: [
-            { role: "system", content: systemContent },
-            { role: "user",   content: userMessage },
-          ],
-        }),
+    // ── Detecta se o modelo é Claude (Anthropic) ou OpenAI ──────────────────
+    // CometAPI expõe ambas as APIs. Claude usa /v1/messages (Anthropic format);
+    // GPT usa /v1/chat/completions (OpenAI format).
+    const isClaudeModel =
+      API_MODEL.toLowerCase().startsWith("claude");
+ 
+    let mergedPrompt = "";
+ 
+    if (isClaudeModel) {
+      // ── Chamada no formato Anthropic Messages API ────────────────────────
+      const response = await fetchWithTimeout(
+        `${API_BASE_URL}/v1/messages`,
+        {
+          method: "POST",
+          headers: {
+            "x-api-key": API_KEY,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: API_MODEL,
+            max_tokens: 3000,
+            system: systemContent,
+            messages: [
+              { role: "user", content: userMessage },
+            ],
+          }),
+        }
+      );
+ 
+      if (!response.ok) {
+        const status = response.status;
+ 
+        if (status === 429) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Limite de requisições excedido. Tente novamente em alguns instantes.",
+            }),
+            {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+ 
+        if (status === 401) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Chave da API inválida ou não configurada corretamente.",
+            }),
+            {
+              status: 401,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+ 
+        const errorText = await response.text().catch(() => "");
+        console.error("Anthropic API error:", status, errorText);
+        throw new Error(`API error: ${status}`);
       }
-    );
  
-    if (!response.ok) {
-      const status = response.status;
+      const data = await response.json();
  
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Formato de resposta Anthropic: data.content é um array de blocos
+      // O texto está em data.content[0].text (type: "text")
+      mergedPrompt =
+        data.content
+          ?.filter((block: { type: string }) => block.type === "text")
+          .map((block: { text: string }) => block.text)
+          .join("")
+          .trim() ?? "";
+ 
+    } else {
+      // ── Chamada no formato OpenAI Chat Completions (fallback) ────────────
+      const response = await fetchWithTimeout(
+        `${API_BASE_URL}/v1/chat/completions`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: API_MODEL,
+            max_tokens: 3000,
+            messages: [
+              { role: "system", content: systemContent },
+              { role: "user", content: userMessage },
+            ],
+          }),
+        }
+      );
+ 
+      if (!response.ok) {
+        const status = response.status;
+ 
+        if (status === 429) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Limite de requisições excedido. Tente novamente em alguns instantes.",
+            }),
+            {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+ 
+        if (status === 401) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Chave da API inválida ou não configurada corretamente.",
+            }),
+            {
+              status: 401,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+ 
+        const errorText = await response.text().catch(() => "");
+        console.error("OpenAI API error:", status, errorText);
+        throw new Error(`API error: ${status}`);
       }
  
-      if (status === 401) {
-        return new Response(
-          JSON.stringify({ error: "Chave da API inválida ou não configurada corretamente." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
- 
-      const errorText = await response.text().catch(() => "");
-      console.error("API error:", status, errorText);
-      throw new Error(`API error: ${status}`);
+      const data = await response.json();
+      mergedPrompt =
+        data.choices?.[0]?.message?.content?.trim() ?? "";
     }
  
-    const data = await response.json();
-    const mergedPrompt = data.choices?.[0]?.message?.content?.trim() || "";
- 
+    // ── Validação da resposta ────────────────────────────────────────────────
     if (!mergedPrompt) {
       throw new Error("O modelo retornou uma resposta vazia.");
     }
  
-    // ── Prompt final = merge da IA + SUFFIX + NEGATIVE_PROMPT ─────────────
+    // ── Montagem do prompt final ─────────────────────────────────────────────
     const finalPrompt = [mergedPrompt, SUFFIX, NEGATIVE_PROMPT]
       .filter(Boolean)
       .join("\n\n");
  
-    // ── Resposta ──────────────────────────────────────────────────────────
-    const usedKeys = selectedKeys.filter((k) => {
+    // ── Monta lista de chaves efetivamente usadas ────────────────────────────
+    const usedKeys = selectedKeys.filter((k: string) => {
       for (const category of ORDERED_CATEGORIES) {
-        if (PROMPT_CATEGORIES[category].includes(k) && (RENDER_PROMPTS[k]?.trim() ?? "") !== "") {
+        if (
+          PROMPT_CATEGORIES[category].includes(k) &&
+          (RENDER_PROMPTS[k]?.trim() ?? "") !== ""
+        ) {
           return true;
         }
       }
@@ -483,7 +711,9 @@ serve(async (req) => {
         prompt: finalPrompt,
         usedKeys,
         ...(unknownKeys.length > 0 && { ignoredKeys: unknownKeys }),
-        ...(emptyAmbienteKeys.length > 0 && { pendingAmbientes: emptyAmbienteKeys }),
+        ...(emptyAmbienteKeys.length > 0 && {
+          pendingAmbientes: emptyAmbienteKeys,
+        }),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -492,9 +722,15 @@ serve(async (req) => {
     console.error("generate-prompt error:", e);
     return new Response(
       JSON.stringify({
-        error: e instanceof Error ? e.message : "Erro interno ao gerar prompt",
+        error:
+          e instanceof Error
+            ? e.message
+            : "Erro interno ao gerar prompt",
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });
